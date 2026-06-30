@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-const nonEmptyString = z.string().min(1);
+const requiredStringSchema = z.string().trim().min(1);
 const currencySchema = z.string().length(3);
 
 export const layerSchema = z.enum([
@@ -21,18 +21,29 @@ export const relationStatusSchema = z.enum([
   "market_speculation",
 ]);
 
+export const marketSchema = z.enum([
+  "US",
+  "CN",
+  "HK",
+  "TW",
+  "KR",
+  "JP",
+  "EU",
+  "PRIVATE",
+]);
+
 export const companySchema = z.object({
-  id: nonEmptyString,
-  name: nonEmptyString,
-  ticker: nonEmptyString,
-  exchange: nonEmptyString,
-  market: z.enum(["US", "CN", "HK", "TW", "KR", "JP", "EU", "PRIVATE"]),
+  id: requiredStringSchema,
+  name: requiredStringSchema,
+  ticker: requiredStringSchema,
+  exchange: requiredStringSchema,
+  market: marketSchema,
   currency: currencySchema,
 });
 
 export const nodeSchema = z
   .object({
-    id: nonEmptyString,
+    id: requiredStringSchema,
     layer: layerSchema,
     kind: z.enum([
       "material",
@@ -42,55 +53,55 @@ export const nodeSchema = z
       "software",
       "application",
     ]),
-    name: nonEmptyString,
-    englishName: z.string().optional(),
-    summary: z.string().min(8),
-    technology: z.string().min(20),
-    barriers: z.array(z.string()).min(1),
-    drivers: z.array(z.string()).min(1),
-    risks: z.array(z.string()).min(1),
-    companyIds: z.array(z.string()).min(1),
-    sourceIds: z.array(z.string()).min(1),
+    name: requiredStringSchema,
+    englishName: requiredStringSchema.optional(),
+    summary: z.string().trim().min(8),
+    technology: z.string().trim().min(20),
+    barriers: z.array(requiredStringSchema).min(1),
+    drivers: z.array(requiredStringSchema).min(1),
+    risks: z.array(requiredStringSchema).min(1),
+    companyIds: z.array(requiredStringSchema).min(1),
+    sourceIds: z.array(requiredStringSchema).min(1),
   })
   .superRefine((node, context) => {
-    if (node.kind === "material" && node.companyIds.length < 2) {
+    if (node.kind === "material" && new Set(node.companyIds).size < 2) {
       context.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["companyIds"],
-        message: "material nodes require at least two leaders",
+        message: "material nodes require at least two distinct leaders",
       });
     }
   });
 
 export const sourceSchema = z.object({
-  id: z.string(),
-  title: z.string(),
+  id: requiredStringSchema,
+  title: requiredStringSchema,
   url: z.string().url(),
-  publisher: z.string(),
+  publisher: requiredStringSchema,
   publishedAt: z.string().date().optional(),
   checkedAt: z.string().datetime(),
 });
 
 export const industryEdgeSchema = z.object({
-  id: z.string(),
-  from: z.string(),
-  to: z.string(),
+  id: requiredStringSchema,
+  from: requiredStringSchema,
+  to: requiredStringSchema,
   type: z.enum(["supply", "integrate", "deploy"]),
 });
 
 export const supplyRelationSchema = z.object({
-  id: z.string(),
-  supplierId: z.string(),
-  customerId: z.string(),
-  nodeId: z.string(),
-  product: z.string().min(2),
+  id: requiredStringSchema,
+  supplierId: requiredStringSchema,
+  customerId: requiredStringSchema,
+  nodeId: requiredStringSchema,
+  product: z.string().trim().min(2),
   status: relationStatusSchema,
-  evidenceSourceIds: z.array(z.string()).min(1),
+  evidenceSourceIds: z.array(requiredStringSchema).min(1),
   announcedAt: z.string().date().optional(),
 });
 
 export const marketSnapshotSchema = z.object({
-  companyId: z.string(),
+  companyId: requiredStringSchema,
   price: z.number().nonnegative(),
   changePct: z.number(),
   currency: currencySchema,
@@ -111,6 +122,7 @@ export const atlasSnapshotSchema = z.object({
 });
 
 export type AtlasNode = z.infer<typeof nodeSchema>;
+export type AtlasMarket = z.infer<typeof marketSchema>;
 export type AtlasCompany = z.infer<typeof companySchema>;
 export type AtlasIndustryEdge = z.infer<typeof industryEdgeSchema>;
 export type AtlasSupplyRelation = z.infer<typeof supplyRelationSchema>;

@@ -2,11 +2,11 @@ import { describe, expect, it } from "vitest";
 
 import {
   atlasSnapshotSchema,
-  industryEdgeSchema,
-  marketSnapshotSchema,
+  companySchema,
+  marketSchema,
   nodeSchema,
-  sourceSchema,
   supplyRelationSchema,
+  type AtlasMarket,
 } from "@/lib/atlas/schema";
 
 const materialNode = {
@@ -36,7 +36,14 @@ const supplyRelation = {
 } as const;
 
 describe("atlas domain contracts", () => {
-  it("rejects a material node with fewer than two representative leaders", () => {
+  it("reuses the exported market schema for companies", () => {
+    const market: AtlasMarket = "US";
+
+    expect(marketSchema.parse(market)).toBe("US");
+    expect(companySchema.shape.market).toBe(marketSchema);
+  });
+
+  it("rejects a material node with fewer than two distinct leaders", () => {
     const result = nodeSchema.safeParse({
       ...materialNode,
       companyIds: ["company-a"],
@@ -48,7 +55,26 @@ describe("atlas domain contracts", () => {
         expect.arrayContaining([
           expect.objectContaining({
             path: ["companyIds"],
-            message: "material nodes require at least two leaders",
+            message: "material nodes require at least two distinct leaders",
+          }),
+        ]),
+      );
+    }
+  });
+
+  it("rejects a material node whose leader IDs are duplicates", () => {
+    const result = nodeSchema.safeParse({
+      ...materialNode,
+      companyIds: ["company-a", "company-a"],
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            path: ["companyIds"],
+            message: "material nodes require at least two distinct leaders",
           }),
         ]),
       );
@@ -71,54 +97,20 @@ describe("atlas domain contracts", () => {
     }
   });
 
-  it("accepts empty strings where the contract only requires string values", () => {
-    expect(
-      nodeSchema.safeParse({
-        ...materialNode,
-        englishName: "",
-        barriers: [""],
-        drivers: [""],
-        risks: [""],
-        companyIds: ["", ""],
-        sourceIds: [""],
-      }).success,
-    ).toBe(true);
-    expect(
-      sourceSchema.safeParse({
-        id: "",
-        title: "",
-        url: "https://example.com/source",
-        publisher: "",
-        checkedAt: "2026-07-01T06:45:00.000Z",
-      }).success,
-    ).toBe(true);
-    expect(
-      industryEdgeSchema.safeParse({ id: "", from: "", to: "", type: "supply" })
-        .success,
-    ).toBe(true);
-    expect(
-      supplyRelationSchema.safeParse({
-        ...supplyRelation,
-        id: "",
-        supplierId: "",
-        customerId: "",
-        nodeId: "",
-        evidenceSourceIds: [""],
-      }).success,
-    ).toBe(true);
-    expect(
-      marketSnapshotSchema.safeParse({
-        companyId: "",
-        price: 0,
-        changePct: 0,
-        currency: "USD",
-        tradedAt: "2026-07-01T06:30:00.000Z",
-        fetchedAt: "2026-07-01T06:45:00.000Z",
-        delayMinutes: 0,
-        ttmEps: null,
-        ttmPe: null,
-      }).success,
-    ).toBe(true);
+  it("rejects a supply relation with a whitespace-only evidence ID", () => {
+    const result = supplyRelationSchema.safeParse({
+      ...supplyRelation,
+      evidenceSourceIds: ["   "],
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ path: ["evidenceSourceIds", 0] }),
+        ]),
+      );
+    }
   });
 
   it("parses a valid minimal atlas snapshot", () => {
