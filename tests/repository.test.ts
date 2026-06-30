@@ -33,12 +33,25 @@ describe("fixtureAtlasRepository", () => {
     expect(snapshot.nodes.map(({ id }) => id).sort()).toEqual(expectedNodeIds);
     expect(snapshot.nodes.some(({ id }) => id === "cpo")).toBe(true);
 
-    expect(snapshot.industryEdges).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ from: "optical-chip", to: "optical-engine" }),
-        expect.objectContaining({ from: "optical-engine", to: "cpo" }),
-      ]),
-    );
+    const requiredEdges = [
+      ["inp-material", "optical-chip"],
+      ["optical-chip", "optical-engine"],
+      ["optical-engine", "cpo"],
+      ["cpo", "ethernet-switch"],
+      ["ethernet-switch", "ai-cluster"],
+      ["low-loss-ccl", "high-layer-pcb"],
+      ["high-layer-pcb", "cpo"],
+      ["switch-asic", "cpo"],
+      ["cpo", "ai-server"],
+      ["ai-server", "ai-cluster"],
+      ["hbm", "ai-server"],
+    ] as const;
+
+    for (const [from, to] of requiredEdges) {
+      expect(snapshot.industryEdges).toEqual(
+        expect.arrayContaining([expect.objectContaining({ from, to })]),
+      );
+    }
 
     const companyIds = new Set(snapshot.companies.map(({ id }) => id));
     const nodeIds = new Set(snapshot.nodes.map(({ id }) => id));
@@ -74,6 +87,22 @@ describe("fixtureAtlasRepository", () => {
           customerId: "nvidia",
           nodeId: "hbm",
           status: "company_confirmed",
+        }),
+      ]),
+    );
+
+    expect(snapshot.sources).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "marvell-optical-dsp-2024",
+          title:
+            "Marvell Announces Industry’s First 5nm Transmit-Only 800G PAM4 Optical DSP",
+          url: "https://www.marvell.com/company/newsroom/marvell-announces-industrys-first-5nm-transmit-only-800g-pam4-optical-dsp-for-ai-and-cloud-interconnects.html",
+        }),
+        expect.objectContaining({
+          id: "shengyi-ccl-products",
+          title: "Synamic 6GX 低损耗高速覆铜板",
+          url: "https://www.syst.com.cn/cn/product/info_16.aspx?itemid=5215",
         }),
       ]),
     );

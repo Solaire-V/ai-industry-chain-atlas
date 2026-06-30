@@ -143,8 +143,8 @@ const sources: AtlasSource[] = [
   },
   {
     id: "marvell-optical-dsp-2024",
-    title: "Marvell Announces 5nm Transmit-Only 800G PAM4 Optical DSP",
-    url: "https://investor.marvell.com/2024-03-25-Marvell-Announces-Industrys-First-5nm-Transmit-Only-800G-PAM4-Optical-DSP-for-AI-and-Cloud-Interconnects",
+    title: "Marvell Announces Industry’s First 5nm Transmit-Only 800G PAM4 Optical DSP",
+    url: "https://www.marvell.com/company/newsroom/marvell-announces-industrys-first-5nm-transmit-only-800g-pam4-optical-dsp-for-ai-and-cloud-interconnects.html",
     publisher: "Marvell Technology",
     publishedAt: "2024-03-25",
     checkedAt,
@@ -188,8 +188,8 @@ const sources: AtlasSource[] = [
   },
   {
     id: "shengyi-ccl-products",
-    title: "生益科技高速覆铜板产品",
-    url: "https://www.syst.com.cn/cn/product/list_22.aspx?lcid=68",
+    title: "Synamic 6GX 低损耗高速覆铜板",
+    url: "https://www.syst.com.cn/cn/product/info_16.aspx?itemid=5215",
     publisher: "Shengyi Technology",
     checkedAt,
   },
