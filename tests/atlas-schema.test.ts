@@ -2,7 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import {
   atlasSnapshotSchema,
+  industryEdgeSchema,
+  marketSnapshotSchema,
   nodeSchema,
+  sourceSchema,
   supplyRelationSchema,
 } from "@/lib/atlas/schema";
 
@@ -66,6 +69,56 @@ describe("atlas domain contracts", () => {
         ]),
       );
     }
+  });
+
+  it("accepts empty strings where the contract only requires string values", () => {
+    expect(
+      nodeSchema.safeParse({
+        ...materialNode,
+        englishName: "",
+        barriers: [""],
+        drivers: [""],
+        risks: [""],
+        companyIds: ["", ""],
+        sourceIds: [""],
+      }).success,
+    ).toBe(true);
+    expect(
+      sourceSchema.safeParse({
+        id: "",
+        title: "",
+        url: "https://example.com/source",
+        publisher: "",
+        checkedAt: "2026-07-01T06:45:00.000Z",
+      }).success,
+    ).toBe(true);
+    expect(
+      industryEdgeSchema.safeParse({ id: "", from: "", to: "", type: "supply" })
+        .success,
+    ).toBe(true);
+    expect(
+      supplyRelationSchema.safeParse({
+        ...supplyRelation,
+        id: "",
+        supplierId: "",
+        customerId: "",
+        nodeId: "",
+        evidenceSourceIds: [""],
+      }).success,
+    ).toBe(true);
+    expect(
+      marketSnapshotSchema.safeParse({
+        companyId: "",
+        price: 0,
+        changePct: 0,
+        currency: "USD",
+        tradedAt: "2026-07-01T06:30:00.000Z",
+        fetchedAt: "2026-07-01T06:45:00.000Z",
+        delayMinutes: 0,
+        ttmEps: null,
+        ttmPe: null,
+      }).success,
+    ).toBe(true);
   });
 
   it("parses a valid minimal atlas snapshot", () => {

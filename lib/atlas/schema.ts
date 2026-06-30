@@ -43,14 +43,14 @@ export const nodeSchema = z
       "application",
     ]),
     name: nonEmptyString,
-    englishName: nonEmptyString.optional(),
+    englishName: z.string().optional(),
     summary: z.string().min(8),
     technology: z.string().min(20),
-    barriers: z.array(nonEmptyString).min(1),
-    drivers: z.array(nonEmptyString).min(1),
-    risks: z.array(nonEmptyString).min(1),
-    companyIds: z.array(nonEmptyString).min(1),
-    sourceIds: z.array(nonEmptyString).min(1),
+    barriers: z.array(z.string()).min(1),
+    drivers: z.array(z.string()).min(1),
+    risks: z.array(z.string()).min(1),
+    companyIds: z.array(z.string()).min(1),
+    sourceIds: z.array(z.string()).min(1),
   })
   .superRefine((node, context) => {
     if (node.kind === "material" && node.companyIds.length < 2) {
@@ -63,34 +63,34 @@ export const nodeSchema = z
   });
 
 export const sourceSchema = z.object({
-  id: nonEmptyString,
-  title: nonEmptyString,
+  id: z.string(),
+  title: z.string(),
   url: z.string().url(),
-  publisher: nonEmptyString,
+  publisher: z.string(),
   publishedAt: z.string().date().optional(),
   checkedAt: z.string().datetime(),
 });
 
 export const industryEdgeSchema = z.object({
-  id: nonEmptyString,
-  from: nonEmptyString,
-  to: nonEmptyString,
+  id: z.string(),
+  from: z.string(),
+  to: z.string(),
   type: z.enum(["supply", "integrate", "deploy"]),
 });
 
 export const supplyRelationSchema = z.object({
-  id: nonEmptyString,
-  supplierId: nonEmptyString,
-  customerId: nonEmptyString,
-  nodeId: nonEmptyString,
+  id: z.string(),
+  supplierId: z.string(),
+  customerId: z.string(),
+  nodeId: z.string(),
   product: z.string().min(2),
   status: relationStatusSchema,
-  evidenceSourceIds: z.array(nonEmptyString).min(1),
+  evidenceSourceIds: z.array(z.string()).min(1),
   announcedAt: z.string().date().optional(),
 });
 
 export const marketSnapshotSchema = z.object({
-  companyId: nonEmptyString,
+  companyId: z.string(),
   price: z.number().nonnegative(),
   changePct: z.number(),
   currency: currencySchema,
