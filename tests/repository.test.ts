@@ -34,22 +34,59 @@ describe("fixtureAtlasRepository", () => {
     expect(snapshot.nodes.some(({ id }) => id === "cpo")).toBe(true);
 
     const requiredEdges = [
-      ["inp-material", "optical-chip"],
-      ["optical-chip", "optical-engine"],
-      ["optical-engine", "cpo"],
-      ["cpo", "ethernet-switch"],
-      ["ethernet-switch", "ai-cluster"],
-      ["low-loss-ccl", "high-layer-pcb"],
-      ["high-layer-pcb", "cpo"],
-      ["switch-asic", "cpo"],
-      ["cpo", "ai-server"],
-      ["ai-server", "ai-cluster"],
-      ["hbm", "ai-server"],
+      ["inp-material", "optical-chip", "supply"],
+      ["optical-chip", "optical-engine", "supply"],
+      ["optical-engine", "cpo", "integrate"],
+      ["cpo", "ethernet-switch", "integrate"],
+      ["ethernet-switch", "ai-cluster", "deploy"],
+      ["low-loss-ccl", "high-layer-pcb", "supply"],
+      ["high-layer-pcb", "cpo", "integrate"],
+      ["switch-asic", "cpo", "integrate"],
+      ["cpo", "ai-server", "deploy"],
+      ["ai-server", "ai-cluster", "deploy"],
+      ["hbm", "ai-server", "integrate"],
     ] as const;
 
-    for (const [from, to] of requiredEdges) {
+    for (const [from, to, type] of requiredEdges) {
       expect(snapshot.industryEdges).toEqual(
-        expect.arrayContaining([expect.objectContaining({ from, to })]),
+        expect.arrayContaining([expect.objectContaining({ from, to, type })]),
+      );
+    }
+    expect(snapshot.industryEdges).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ from: "optical-chip", to: "laser" }),
+      ]),
+    );
+    expect(snapshot.industryEdges).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ from: "optical-chip", to: "modulator" }),
+      ]),
+    );
+
+    const requiredTickers = {
+      broadcom: "AVGO",
+      marvell: "MRVL",
+      coherent: "COHR",
+      lumentum: "LITE",
+      corning: "GLW",
+      tsmc: "TSM",
+      nvidia: "NVDA",
+      "sk-hynix": "000660.KS",
+      micron: "MU",
+      "samsung-electronics": "005930.KS",
+      arista: "ANET",
+      fabrinet: "FN",
+      "zhongji-innolight": "300308.SZ",
+      eoptolink: "300502.SZ",
+      "shennan-circuits": "002916.SZ",
+      "victory-giant": "300476.SZ",
+      "shengyi-technology": "600183.SH",
+      "kingboard-laminates": "1888.HK",
+    } as const;
+
+    for (const [id, ticker] of Object.entries(requiredTickers)) {
+      expect(snapshot.companies).toEqual(
+        expect.arrayContaining([expect.objectContaining({ id, ticker })]),
       );
     }
 
@@ -80,6 +117,17 @@ describe("fixtureAtlasRepository", () => {
       );
     }
 
+    expect(snapshot.companyNodeRoles).toHaveLength(
+      snapshot.nodes.reduce((total, node) => total + node.companyIds.length, 0),
+    );
+    expect(
+      new Set(
+        snapshot.nodes.map((node) =>
+          JSON.stringify([node.barriers, node.drivers, node.risks]),
+        ),
+      ).size,
+    ).toBe(snapshot.nodes.length);
+
     expect(snapshot.supplyRelations).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -106,5 +154,49 @@ describe("fixtureAtlasRepository", () => {
         }),
       ]),
     );
+  });
+
+  it("rejects duplicate IDs at the repository runtime boundary", async () => {
+    const snapshot = await fixtureAtlasRepository.getSnapshot();
+    const result = atlasSnapshotSchema.safeParse({
+      ...snapshot,
+      nodes: [...snapshot.nodes, snapshot.nodes[0]],
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            path: ["nodes", snapshot.nodes.length, "id"],
+          }),
+        ]),
+      );
+    }
+  });
+
+  it("rejects dangling role evidence at the repository runtime boundary", async () => {
+    const snapshot = await fixtureAtlasRepository.getSnapshot();
+    const result = atlasSnapshotSchema.safeParse({
+      ...snapshot,
+      companyNodeRoles: [
+        {
+          ...snapshot.companyNodeRoles[0],
+          sourceIds: ["missing-source"],
+        },
+        ...snapshot.companyNodeRoles.slice(1),
+      ],
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            path: ["companyNodeRoles", 0, "sourceIds", 0],
+          }),
+        ]),
+      );
+    }
   });
 });

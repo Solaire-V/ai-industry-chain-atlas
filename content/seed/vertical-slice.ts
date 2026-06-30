@@ -5,6 +5,7 @@ import type {
   AtlasSnapshot,
   AtlasSource,
   AtlasSupplyRelation,
+  CompanyNodeRole,
 } from "@/lib/atlas/schema";
 
 const checkedAt = "2026-06-30T12:00:00.000Z";
@@ -142,6 +143,20 @@ const sources: AtlasSource[] = [
     checkedAt,
   },
   {
+    id: "lumentum-eml-200g",
+    title: "EML 200G PAM4 CWDM Laser",
+    url: "https://www.lumentum.com/en/products/eml-200g-pam4-cwdm-laser",
+    publisher: "Lumentum",
+    checkedAt,
+  },
+  {
+    id: "lumentum-datacom-transceivers",
+    title: "Datacom Transceivers",
+    url: "https://www.lumentum.com/en/products/data-center/datacom-transceivers",
+    publisher: "Lumentum",
+    checkedAt,
+  },
+  {
     id: "marvell-optical-dsp-2024",
     title: "Marvell Announces Industry’s First 5nm Transmit-Only 800G PAM4 Optical DSP",
     url: "https://www.marvell.com/company/newsroom/marvell-announces-industrys-first-5nm-transmit-only-800g-pam4-optical-dsp-for-ai-and-cloud-interconnects.html",
@@ -177,13 +192,6 @@ const sources: AtlasSource[] = [
     url: "https://investor.nvidia.com/news/press-release-details/2026/NVIDIA-and-SK-hynix-Announce-Multiyear-Technology-Partnership-to-Advance-Memory-for-AI-Factories/default.aspx",
     publisher: "NVIDIA",
     publishedAt: "2026-06-07",
-    checkedAt,
-  },
-  {
-    id: "shengyi-pcb-capability",
-    title: "生益电子技术能力表",
-    url: "https://www.sye.com.cn/CompetencyTable/index.aspx",
-    publisher: "Shengyi Electronics",
     checkedAt,
   },
   {
@@ -224,9 +232,10 @@ const sources: AtlasSource[] = [
   },
   {
     id: "fabrinet-optical-packaging",
-    title: "Fabrinet Advanced Optical Packaging and Manufacturing",
-    url: "https://investor.fabrinet.com/",
+    title: "Fabrinet Fiscal Year 2025 Results and Optical Manufacturing Capabilities",
+    url: "https://investor.fabrinet.com/news-releases/news-release-details/fabrinet-announces-fourth-quarter-and-fiscal-year-2025-financial",
     publisher: "Fabrinet",
+    publishedAt: "2025-08-18",
     checkedAt,
   },
   {
@@ -261,17 +270,66 @@ const sources: AtlasSource[] = [
     publishedAt: "2025-10-08",
     checkedAt,
   },
+  {
+    id: "marvell-datacenter-switches",
+    title: "Data Center Switches: Enabling the AI Cloud",
+    url: "https://www.marvell.com/products/switching/datacenter.html",
+    publisher: "Marvell Technology",
+    checkedAt,
+  },
+  {
+    id: "sk-hynix-nvidia-hbm3e-2026",
+    title: "SK hynix Reaffirms Partnership With NVIDIA at GTC 2026",
+    url: "https://news.skhynix.com/gtc-2026-exhibition-booth/",
+    publisher: "SK hynix",
+    publishedAt: "2026-03-16",
+    checkedAt,
+  },
+  {
+    id: "sk-hynix-nvidia-supplier-2026",
+    title: "SK Group Chairman Attends GTC Taipei 2026 Keynote",
+    url: "https://news.skhynix.com/gtc-taipei-2026-keynote/",
+    publisher: "SK hynix",
+    publishedAt: "2026-06-01",
+    checkedAt,
+  },
 ];
+
+const nodeRiskProfiles: Record<
+  string,
+  Pick<AtlasNode, "barriers" | "drivers" | "risks">
+> = {
+  "inp-material": { barriers: ["大尺寸单晶生长、缺陷密度和外延级表面控制"], drivers: ["高速 EML、CW 激光器与探测器需求"], risks: ["铟资源及出口许可波动"] },
+  "silicon-photonics-material": { barriers: ["顶层硅与埋氧层厚度均匀性及超低缺陷"], drivers: ["硅光收发器和 CPO 异质集成扩张"], risks: ["光子平台路线与晶圆尺寸切换"] },
+  "optical-fiber-preform": { barriers: ["超高纯沉积、折射率剖面与拉丝一致性"], drivers: ["AI 数据中心多芯高密度布线增长"], risks: ["扩产后普通光纤供需周期反转"] },
+  "low-loss-ccl": { barriers: ["低 Df 树脂配方、铜箔界面与批次稳定性"], drivers: ["112G/224G SerDes 推动更低链路插损"], risks: ["材料认证周期长且代际替换加快"] },
+  "optical-chip": { barriers: ["光电器件设计、晶圆良率和耦合封装协同"], drivers: ["800G、1.6T 及 CPO 光通道增加"], risks: ["InP、硅光等平台竞争与价格下降"] },
+  laser: { barriers: ["高功率、低 RIN、窄线宽与长期可靠性"], drivers: ["硅光模块和外置 CPO 光源需求"], risks: ["热失效、良率及单通道价格下行"] },
+  modulator: { barriers: ["高速带宽、消光比、插损与驱动电压平衡"], drivers: ["每通道 200G 向更高速率演进"], risks: ["EML、硅光和薄膜铌酸锂路线分流"] },
+  "tia-driver": { barriers: ["模拟前端噪声、线性度、带宽和功耗协同"], drivers: ["高速光通道数及模拟带宽提升"], risks: ["DSP 集成度上升压缩独立芯片空间"] },
+  "optical-dsp": { barriers: ["高速 ADC/DAC、均衡算法与先进制程功耗"], drivers: ["800G/1.6T 模块信号完整性要求"], risks: ["LPO/LRO 架构减少部分 DSP 用量"] },
+  "fa-mpo": { barriers: ["多芯端面精度、低插损和批量装配一致性"], drivers: ["CPO 光引擎高密度光纤引出需求"], risks: ["连接器标准分化与现场维护难度"] },
+  "high-layer-pcb": { barriers: ["高层数对位、背钻、阻抗与大尺寸良率"], drivers: ["AI 服务器和交换机高速端口密度上升"], risks: ["材料成本、资本开支与客户集中度"] },
+  "switch-asic": { barriers: ["超大规模 SerDes、缓存调度和先进制程设计"], drivers: ["AI 集群 scale-out 与 scale-up 带宽增长"], risks: ["协议路线、云厂自研和制程成本压力"] },
+  "pluggable-optics": { barriers: ["光电封装、散热、固件互通与自动化测试"], drivers: ["800G 放量及 1.6T 端口升级"], risks: ["CPO/LPO 替代与模块价格快速下降"] },
+  "optical-engine": { barriers: ["异质封装、光纤耦合、KGD 测试与热隔离"], drivers: ["光电接口向封装近端迁移"], risks: ["早期规格变化和规模制造良率不确定"] },
+  cpo: { barriers: ["ASIC 与光引擎共封装、可测试性和维修体系"], drivers: ["51.2T 以上交换系统功耗墙"], risks: ["仍处导入期，量产节奏和客户采用不确定"] },
+  hbm: { barriers: ["TSV 堆叠、基底裸片、封装良率与热管理"], drivers: ["大模型训练推理的内存带宽需求"], risks: ["资本开支周期、客户认证和代际爬坡"] },
+  "ethernet-switch": { barriers: ["系统散热、网络操作系统和拥塞控制协同"], drivers: ["以太网 AI 后端网络部署扩大"], risks: ["InfiniBand 竞争及云客户采购波动"] },
+  "ai-server": { barriers: ["加速器、内存、网络、供电液冷的系统验证"], drivers: ["训练与推理算力基础设施扩张"], risks: ["芯片供应、机柜功率和交付认证约束"] },
+  "ai-cluster": { barriers: ["跨万卡调度、故障恢复与端到端性能优化"], drivers: ["模型规模和推理调用量持续增长"], risks: ["利用率不足、能耗成本和架构快速迭代"] },
+};
 
 const node = (
   value: Omit<AtlasNode, "barriers" | "drivers" | "risks"> &
     Partial<Pick<AtlasNode, "barriers" | "drivers" | "risks">>,
-): AtlasNode => ({
-  barriers: value.barriers ?? ["工艺一致性、客户验证与规模化良率构成进入壁垒"],
-  drivers: value.drivers ?? ["AI 集群带宽密度与能效要求持续提升"],
-  risks: value.risks ?? ["技术路线迭代、需求波动及扩产节奏错配"],
-  ...value,
-});
+): AtlasNode => {
+  const profile = nodeRiskProfiles[value.id];
+  if (!profile) {
+    throw new Error(`missing risk profile for node: ${value.id}`);
+  }
+  return { ...profile, ...value };
+};
 
 const nodes: AtlasNode[] = [
   node({ id: "inp-material", layer: "materials", kind: "material", name: "磷化铟衬底", englishName: "Indium Phosphide Substrate", summary: "高速光芯片与激光器的关键化合物半导体衬底。", technology: "磷化铟具备直接带隙和高电子迁移率，适合高速激光、探测及调制器件的外延生长。", companyIds: ["axt", "sumitomo-electric"], sourceIds: ["axt-inp-2026", "sumitomo-compound"] }),
@@ -295,6 +353,74 @@ const nodes: AtlasNode[] = [
   node({ id: "ai-cluster", layer: "infrastructure", kind: "system", name: "AI 计算集群", englishName: "AI Compute Cluster", summary: "以高速网络汇聚大规模服务器的训练与推理系统。", technology: "AI 集群依靠计算、网络、存储和软件栈共同扩展；尾延迟、网络拥塞、故障域与能耗决定有效算力而非仅看芯片峰值。", companyIds: ["nvidia", "arista", "broadcom"], sourceIds: ["nvidia-spectrum-x", "nvidia-dgx"] }),
 ];
 
+const role = (
+  nodeId: string,
+  companyId: string,
+  roleName: string,
+  product: string,
+  sourceIds: string[],
+): CompanyNodeRole => ({
+  id: `${nodeId}--${companyId}`,
+  nodeId,
+  companyId,
+  role: roleName,
+  product,
+  sourceIds,
+});
+
+const companyNodeRoles: CompanyNodeRole[] = [
+  role("inp-material", "axt", "衬底厂商", "磷化铟衬底", ["axt-inp-2026"]),
+  role("inp-material", "sumitomo-electric", "衬底厂商", "磷化铟衬底", ["sumitomo-compound"]),
+  role("silicon-photonics-material", "soitec", "衬底厂商", "Photonics-SOI 晶圆", ["soitec-photonics-soi"]),
+  role("silicon-photonics-material", "globalwafers", "衬底厂商", "硅光用 SOI 晶圆", ["globalwafers-soi-ai-2025"]),
+  role("optical-fiber-preform", "corning", "预制棒与光纤厂商", "OVD 预制棒和光纤", ["corning-ovd"]),
+  role("optical-fiber-preform", "yofc", "预制棒与光纤厂商", "OVD 光纤预制棒", ["yofc-preform-2017"]),
+  role("low-loss-ccl", "shengyi-technology", "高速覆铜板厂商", "Synamic 6GX 低损耗覆铜板", ["shengyi-ccl-products"]),
+  role("low-loss-ccl", "kingboard-laminates", "高速覆铜板厂商", "KB 高速低损耗材料", ["kingboard-high-speed"]),
+  role("low-loss-ccl", "rogers", "高速覆铜板厂商", "XtremeSpeed 低损耗电路材料", ["rogers-low-loss"]),
+  role("optical-chip", "coherent", "光子器件厂商", "InP 与硅光子器件", ["coherent-cpo-2026"]),
+  role("optical-chip", "lumentum", "光子器件厂商", "InP EML 光子器件", ["lumentum-eml-200g"]),
+  role("optical-chip", "broadcom", "硅光平台厂商", "CPO 硅光光子器件", ["broadcom-cpo"]),
+  role("optical-chip", "tsmc", "硅光制造平台", "COUPE 硅光子技术", ["broadcom-tsmc-cpo-2025"]),
+  role("laser", "coherent", "激光器厂商", "CPO 外置 InP CW 激光器", ["coherent-cpo-2026"]),
+  role("laser", "lumentum", "激光器厂商", "数据中心 CW 激光器", ["lumentum-cw-lasers"]),
+  role("modulator", "coherent", "调制器厂商", "200G InP 电吸收调制激光器", ["coherent-eml-2022"]),
+  role("modulator", "lumentum", "调制器厂商", "200G PAM4 EML", ["lumentum-eml-200g"]),
+  role("tia-driver", "coherent", "模拟光电器件厂商", "驱动器与 TIA", ["coherent-optical-portfolio"]),
+  role("optical-dsp", "marvell", "光 DSP 厂商", "Spica Gen2-T 800G PAM4 DSP", ["marvell-optical-dsp-2024"]),
+  role("optical-dsp", "broadcom", "光 DSP 平台厂商", "CPO 光电信号处理", ["broadcom-cpo"]),
+  role("fa-mpo", "corning", "光纤材料厂商", "光纤阵列所需低损耗光纤", ["corning-ovd"]),
+  role("fa-mpo", "coherent", "无源光组件厂商", "光纤阵列与无源光组件", ["coherent-optical-portfolio"]),
+  role("high-layer-pcb", "shennan-circuits", "高速 PCB 厂商", "高速高多层板与背板", ["shennan-pcb-capability"]),
+  role("high-layer-pcb", "victory-giant", "高速 PCB 厂商", "AI 服务器与交换机高多层 PCB", ["victory-giant-ai-pcb"]),
+  role("switch-asic", "broadcom", "交换芯片厂商", "Tomahawk 交换 ASIC", ["broadcom-bailly-2024"]),
+  role("switch-asic", "nvidia", "交换芯片厂商", "Spectrum-X 交换芯片平台", ["nvidia-spectrum-x"]),
+  role("switch-asic", "marvell", "交换芯片厂商", "Teralynx 数据中心交换芯片", ["marvell-datacenter-switches"]),
+  role("pluggable-optics", "coherent", "光模块厂商", "2x400G FR4 Lite 光模块", ["coherent-pluggable-2025"]),
+  role("pluggable-optics", "lumentum", "光模块厂商", "800G 与 1.6T OSFP 光模块", ["lumentum-datacom-transceivers"]),
+  role("pluggable-optics", "zhongji-innolight", "光模块厂商", "1.6T 与 800G 可插拔光模块", ["innolight-1p6t-2023"]),
+  role("pluggable-optics", "eoptolink", "光模块厂商", "800G OSFP 与 QSFP-DD 光模块", ["eoptolink-800g"]),
+  role("pluggable-optics", "fabrinet", "光模块制造服务商", "光通信模块精密制造与测试", ["fabrinet-optical-packaging"]),
+  role("optical-engine", "broadcom", "光引擎厂商", "Bailly 6.4T 硅光光引擎", ["broadcom-bailly-2024"]),
+  role("optical-engine", "coherent", "光引擎厂商", "6.4T socketed CPO 光引擎", ["coherent-cpo-2026"]),
+  role("optical-engine", "tsmc", "光子制造平台", "COUPE 光引擎技术", ["broadcom-tsmc-cpo-2025"]),
+  role("optical-engine", "fabrinet", "精密光封装服务商", "光通信组件高级光封装", ["fabrinet-optical-packaging"]),
+  role("cpo", "broadcom", "CPO 平台厂商", "Bailly 与 Davisson CPO 交换平台", ["broadcom-bailly-2024", "broadcom-tsmc-cpo-2025"]),
+  role("cpo", "coherent", "CPO 技术厂商", "socketed CPO 与外置激光方案", ["coherent-cpo-2026"]),
+  role("cpo", "nvidia", "CPO 网络平台厂商", "Spectrum-X Ethernet Photonics", ["nvidia-spectrum-x"]),
+  role("cpo", "tsmc", "CPO 硅光制造平台", "COUPE 异质光子引擎", ["broadcom-tsmc-cpo-2025"]),
+  role("hbm", "sk-hynix", "HBM 厂商", "用于 NVIDIA GB300 的 HBM3E", ["sk-hynix-nvidia-hbm3e-2026"]),
+  role("hbm", "micron", "HBM 厂商", "HBM4 36GB 12H", ["micron-hbm4-2026"]),
+  role("hbm", "samsung-electronics", "HBM 厂商", "量产 HBM4", ["samsung-hbm4-2026"]),
+  role("ethernet-switch", "arista", "交换机系统厂商", "1.6T AI fabric 交换机", ["arista-ai-switch-2026"]),
+  role("ethernet-switch", "broadcom", "CPO 交换平台厂商", "Bailly CPO 以太网交换机", ["broadcom-bailly-2024"]),
+  role("ethernet-switch", "nvidia", "AI 以太网平台厂商", "Spectrum-X 以太网交换机", ["nvidia-spectrum-x"]),
+  role("ai-server", "nvidia", "AI 系统平台厂商", "NVIDIA DGX 系统", ["nvidia-dgx"]),
+  role("ai-cluster", "nvidia", "AI 集群平台厂商", "DGX SuperPOD 与 Spectrum-X", ["nvidia-dgx", "nvidia-spectrum-x"]),
+  role("ai-cluster", "arista", "AI 网络平台厂商", "AI scale-up 与 scale-out fabric", ["arista-ai-switch-2026"]),
+  role("ai-cluster", "broadcom", "AI 网络芯片平台厂商", "面向大规模 AI 集群的 CPO 网络", ["broadcom-bailly-2024"]),
+];
+
 const edge = (from: string, to: string, type: AtlasIndustryEdge["type"] = "supply"): AtlasIndustryEdge => ({
   id: `${from}--${to}`,
   from,
@@ -307,8 +433,6 @@ const industryEdges: AtlasIndustryEdge[] = [
   edge("silicon-photonics-material", "optical-chip"),
   edge("optical-fiber-preform", "fa-mpo"),
   edge("low-loss-ccl", "high-layer-pcb"),
-  edge("optical-chip", "laser", "integrate"),
-  edge("optical-chip", "modulator", "integrate"),
   edge("laser", "optical-engine"),
   edge("modulator", "optical-engine"),
   edge("tia-driver", "optical-engine"),
@@ -334,16 +458,17 @@ const supplyRelations: AtlasSupplyRelation[] = [
     supplierId: "sk-hynix",
     customerId: "nvidia",
     nodeId: "hbm",
-    product: "与 NVIDIA AI 基础设施路线协同的下一代先进内存（HBM 节点）及供应扩展",
+    product: "用于 NVIDIA GB300 系统的 SK hynix HBM3E，并延伸至下一代内存路线协同",
     status: "company_confirmed",
-    evidenceSourceIds: ["nvidia-sk-hynix-2026"],
-    announcedAt: "2026-06-07",
+    evidenceSourceIds: ["sk-hynix-nvidia-hbm3e-2026", "sk-hynix-nvidia-supplier-2026", "nvidia-sk-hynix-2026"],
+    announcedAt: "2026-03-16",
   },
 ];
 
 export const verticalSlice: AtlasSnapshot = {
   nodes,
   companies,
+  companyNodeRoles,
   industryEdges,
   supplyRelations,
   marketSnapshots: [],

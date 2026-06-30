@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   atlasSnapshotSchema,
+  companyNodeRoleSchema,
   companySchema,
   marketSchema,
   nodeSchema,
@@ -33,6 +34,77 @@ const supplyRelation = {
   status: "company_confirmed",
   evidenceSourceIds: ["source-a"],
   announcedAt: "2026-06-15",
+} as const;
+
+const validSnapshot = {
+  nodes: [materialNode],
+  companies: [
+    {
+      id: "company-a",
+      name: "材料公司 A",
+      ticker: "MATA",
+      exchange: "NASDAQ",
+      market: "US",
+      currency: "USD",
+    },
+    {
+      id: "company-b",
+      name: "材料公司 B",
+      ticker: "MATB",
+      exchange: "PRIVATE",
+      market: "PRIVATE",
+      currency: "CNY",
+    },
+  ],
+  companyNodeRoles: [
+    {
+      id: "role-a",
+      companyId: "company-a",
+      nodeId: "advanced-packaging-materials",
+      role: "材料供应商",
+      product: "封装基板材料",
+      sourceIds: ["source-a"],
+    },
+    {
+      id: "role-b",
+      companyId: "company-b",
+      nodeId: "advanced-packaging-materials",
+      role: "材料供应商",
+      sourceIds: ["source-a"],
+    },
+  ],
+  industryEdges: [
+    {
+      id: "edge-a",
+      from: "advanced-packaging-materials",
+      to: "advanced-packaging-materials",
+      type: "supply",
+    },
+  ],
+  supplyRelations: [supplyRelation],
+  marketSnapshots: [
+    {
+      companyId: "company-a",
+      price: 125.5,
+      changePct: -1.2,
+      currency: "USD",
+      tradedAt: "2026-07-01T06:30:00.000Z",
+      fetchedAt: "2026-07-01T06:45:00.000Z",
+      delayMinutes: 15,
+      ttmEps: 3.2,
+      ttmPe: 39.22,
+    },
+  ],
+  sources: [
+    {
+      id: "source-a",
+      title: "公司供应关系公告",
+      url: "https://example.com/disclosure",
+      publisher: "Example Exchange",
+      publishedAt: "2026-06-15",
+      checkedAt: "2026-07-01T06:45:00.000Z",
+    },
+  ],
 } as const;
 
 describe("atlas domain contracts", () => {
@@ -113,61 +185,88 @@ describe("atlas domain contracts", () => {
     }
   });
 
-  it("parses a valid minimal atlas snapshot", () => {
-    const snapshot = {
-      nodes: [materialNode],
-      companies: [
-        {
-          id: "company-a",
-          name: "材料公司 A",
-          ticker: "MATA",
-          exchange: "NASDAQ",
-          market: "US",
-          currency: "USD",
-        },
-        {
-          id: "company-b",
-          name: "材料公司 B",
-          ticker: "MATB",
-          exchange: "PRIVATE",
-          market: "PRIVATE",
-          currency: "CNY",
-        },
-      ],
-      industryEdges: [
-        {
-          id: "edge-a",
-          from: "advanced-packaging-materials",
-          to: "advanced-packaging-system",
-          type: "supply",
-        },
-      ],
-      supplyRelations: [supplyRelation],
-      marketSnapshots: [
-        {
-          companyId: "company-a",
-          price: 125.5,
-          changePct: -1.2,
-          currency: "USD",
-          tradedAt: "2026-07-01T06:30:00.000Z",
-          fetchedAt: "2026-07-01T06:45:00.000Z",
-          delayMinutes: 15,
-          ttmEps: 3.2,
-          ttmPe: 39.22,
-        },
-      ],
-      sources: [
-        {
-          id: "source-a",
-          title: "公司供应关系公告",
-          url: "https://example.com/disclosure",
-          publisher: "Example Exchange",
-          publishedAt: "2026-06-15",
-          checkedAt: "2026-07-01T06:45:00.000Z",
-        },
-      ],
-    };
+  it("requires evidence on a company-node role", () => {
+    const result = companyNodeRoleSchema.safeParse({
+      id: "role-a",
+      companyId: "company-a",
+      nodeId: "advanced-packaging-materials",
+      role: "材料供应商",
+      sourceIds: [],
+    });
 
-    expect(atlasSnapshotSchema.parse(snapshot)).toEqual(snapshot);
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects duplicate entity IDs", () => {
+    const result = atlasSnapshotSchema.safeParse({
+      ...validSnapshot,
+      companies: [validSnapshot.companies[0], validSnapshot.companies[0]],
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ path: ["companies", 1, "id"] }),
+        ]),
+      );
+    }
+  });
+
+  it("rejects dangling cross-references", () => {
+    const result = atlasSnapshotSchema.safeParse({
+      ...validSnapshot,
+      industryEdges: [
+        { ...validSnapshot.industryEdges[0], to: "missing-node" },
+      ],
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ path: ["industryEdges", 0, "to"] }),
+        ]),
+      );
+    }
+  });
+
+  it("rejects a node-company association without an evidenced role", () => {
+    const result = atlasSnapshotSchema.safeParse({
+      ...validSnapshot,
+      companyNodeRoles: [validSnapshot.companyNodeRoles[0]],
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ path: ["nodes", 0, "companyIds", 1] }),
+        ]),
+      );
+    }
+  });
+
+  it("rejects a duplicate company and traded-at market snapshot key", () => {
+    const result = atlasSnapshotSchema.safeParse({
+      ...validSnapshot,
+      marketSnapshots: [
+        validSnapshot.marketSnapshots[0],
+        validSnapshot.marketSnapshots[0],
+      ],
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ path: ["marketSnapshots", 1, "tradedAt"] }),
+        ]),
+      );
+    }
+  });
+
+  it("parses a valid minimal atlas snapshot", () => {
+    expect(atlasSnapshotSchema.parse(validSnapshot)).toEqual(validSnapshot);
   });
 });
