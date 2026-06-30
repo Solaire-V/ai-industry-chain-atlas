@@ -107,6 +107,19 @@ const validSnapshot = {
   ],
 } as const;
 
+const expectSnapshotIssueAt = (
+  snapshot: unknown,
+  path: Array<string | number>,
+) => {
+  const result = atlasSnapshotSchema.safeParse(snapshot);
+  expect(result.success).toBe(false);
+  if (!result.success) {
+    expect(result.error.issues).toEqual(
+      expect.arrayContaining([expect.objectContaining({ path })]),
+    );
+  }
+};
+
 describe("atlas domain contracts", () => {
   it("reuses the exported market schema for companies", () => {
     const market: AtlasMarket = "US";
@@ -229,6 +242,138 @@ describe("atlas domain contracts", () => {
         ]),
       );
     }
+  });
+
+  it("rejects a dangling node company reference", () => {
+    expectSnapshotIssueAt(
+      {
+        ...validSnapshot,
+        nodes: [
+          {
+            ...validSnapshot.nodes[0],
+            companyIds: ["missing-company", "company-b"],
+          },
+        ],
+      },
+      ["nodes", 0, "companyIds", 0],
+    );
+  });
+
+  it("rejects a dangling node source reference", () => {
+    expectSnapshotIssueAt(
+      {
+        ...validSnapshot,
+        nodes: [
+          { ...validSnapshot.nodes[0], sourceIds: ["missing-source"] },
+        ],
+      },
+      ["nodes", 0, "sourceIds", 0],
+    );
+  });
+
+  it("rejects a company-node role with a dangling company", () => {
+    expectSnapshotIssueAt(
+      {
+        ...validSnapshot,
+        companyNodeRoles: [
+          {
+            ...validSnapshot.companyNodeRoles[0],
+            companyId: "missing-company",
+          },
+          validSnapshot.companyNodeRoles[1],
+        ],
+      },
+      ["companyNodeRoles", 0, "companyId"],
+    );
+  });
+
+  it("rejects a company-node role with a dangling node", () => {
+    expectSnapshotIssueAt(
+      {
+        ...validSnapshot,
+        companyNodeRoles: [
+          {
+            ...validSnapshot.companyNodeRoles[0],
+            nodeId: "missing-node",
+          },
+          validSnapshot.companyNodeRoles[1],
+        ],
+      },
+      ["companyNodeRoles", 0, "nodeId"],
+    );
+  });
+
+  it("rejects a role company that is absent from node.companyIds", () => {
+    const companyC = {
+      ...validSnapshot.companies[0],
+      id: "company-c",
+      ticker: "MATC",
+    };
+    expectSnapshotIssueAt(
+      {
+        ...validSnapshot,
+        companies: [...validSnapshot.companies, companyC],
+        companyNodeRoles: [
+          {
+            ...validSnapshot.companyNodeRoles[0],
+            companyId: "company-c",
+          },
+          validSnapshot.companyNodeRoles[1],
+        ],
+      },
+      ["companyNodeRoles", 0, "companyId"],
+    );
+  });
+
+  it("rejects a dangling industry-edge endpoint", () => {
+    expectSnapshotIssueAt(
+      {
+        ...validSnapshot,
+        industryEdges: [
+          { ...validSnapshot.industryEdges[0], from: "missing-node" },
+        ],
+      },
+      ["industryEdges", 0, "from"],
+    );
+  });
+
+  it.each([
+    ["supplierId", "missing-company", ["supplyRelations", 0, "supplierId"]],
+    ["customerId", "missing-company", ["supplyRelations", 0, "customerId"]],
+    ["nodeId", "missing-node", ["supplyRelations", 0, "nodeId"]],
+    [
+      "evidenceSourceIds",
+      ["missing-source"],
+      ["supplyRelations", 0, "evidenceSourceIds", 0],
+    ],
+  ] as const)(
+    "rejects a supply relation with dangling %s",
+    (field, value, path) => {
+      expectSnapshotIssueAt(
+        {
+          ...validSnapshot,
+          supplyRelations: [
+            { ...validSnapshot.supplyRelations[0], [field]: value },
+          ],
+        },
+        [...path],
+      );
+    },
+  );
+
+  it("rejects a market snapshot with a dangling company", () => {
+    expectSnapshotIssueAt(
+      {
+        ...validSnapshot,
+        marketSnapshots: [
+          {
+            ...validSnapshot.marketSnapshots[0],
+            companyId: "missing-company",
+          },
+        ],
+      },
+      ["marketSnapshots", 0, "companyId"],
+    );
   });
 
   it("rejects a node-company association without an evidenced role", () => {
