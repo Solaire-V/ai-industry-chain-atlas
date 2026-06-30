@@ -9,6 +9,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
+    "test:e2e:server": "next build && next start",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

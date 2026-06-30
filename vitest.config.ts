@@ -10,6 +10,24 @@ export default defineConfig({
     },
   },
   test: {
-    environment: "jsdom",
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: "node",
+          environment: "node",
+          include: ["tests/**/*.{test,spec}.ts"],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: "components",
+          environment: "jsdom",
+          include: ["tests/**/*.{test,spec}.tsx"],
+          setupFiles: ["./tests/setup.ts"],
+        },
+      },
+    ],
   },
 });
