@@ -277,16 +277,16 @@ Expected: FAIL because the repository is missing.
 
 - [ ] **Step 3: Create the exact vertical-slice inventory**
 
-In `content/seed/vertical-slice.ts`, create validated records for these 18 nodes:
+In `content/seed/vertical-slice.ts`, create validated records for these 19 nodes:
 
 ```text
 inp-material, silicon-photonics-material, optical-fiber-preform, low-loss-ccl,
 optical-chip, laser, modulator, tia-driver, optical-dsp, fa-mpo,
 high-layer-pcb, switch-asic, pluggable-optics, optical-engine, cpo,
-ethernet-switch, ai-server, ai-cluster
+hbm, ethernet-switch, ai-server, ai-cluster
 ```
 
-Include at least these public companies as role-specific representatives: Broadcom (`AVGO`), Marvell (`MRVL`), Coherent (`COHR`), Lumentum (`LITE`), Corning (`GLW`), TSMC (`TSM`), NVIDIA (`NVDA`), SK hynix (`000660.KS`), Arista Networks (`ANET`), Fabrinet (`FN`), Zhongji Innolight (`300308.SZ`), Eoptolink (`300502.SZ`), Shennan Circuits (`002916.SZ`), Victory Giant (`300476.SZ`), Shengyi Technology (`600183.SH`), and Kingboard Laminates (`1888.HK`). Each material node must reference at least two companies and one primary source.
+Include at least these public companies as role-specific representatives: Broadcom (`AVGO`), Marvell (`MRVL`), Coherent (`COHR`), Lumentum (`LITE`), Corning (`GLW`), TSMC (`TSM`), NVIDIA (`NVDA`), SK hynix (`000660.KS`), Micron (`MU`), Samsung Electronics (`005930.KS`), Arista Networks (`ANET`), Fabrinet (`FN`), Zhongji Innolight (`300308.SZ`), Eoptolink (`300502.SZ`), Shennan Circuits (`002916.SZ`), Victory Giant (`300476.SZ`), Shengyi Technology (`600183.SH`), and Kingboard Laminates (`1888.HK`). Each material node must reference at least two companies and one primary source.
 
 Add this highlighted path as typed industry edges:
 
