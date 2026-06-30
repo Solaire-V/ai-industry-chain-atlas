@@ -203,31 +203,34 @@ import { z } from "zod";
 
 export const layerSchema = z.enum(["materials", "manufacturing", "chips", "interconnect", "infrastructure", "platform", "applications"]);
 export const relationStatusSchema = z.enum(["company_confirmed", "counterparty_confirmed", "regulatory_disclosure", "multi_source_report", "market_speculation"]);
+export const marketSchema = z.enum(["US", "CN", "HK", "TW", "KR", "JP", "EU", "PRIVATE"]);
+const requiredTextSchema = z.string().trim().min(1);
 
 export const companySchema = z.object({
-  id: z.string().min(1), name: z.string().min(1), ticker: z.string().min(1),
-  exchange: z.string().min(1), market: z.enum(["US", "CN", "HK", "TW", "KR", "JP", "EU", "PRIVATE"]), currency: z.string().length(3)
+  id: requiredTextSchema, name: requiredTextSchema, ticker: requiredTextSchema,
+  exchange: requiredTextSchema, market: marketSchema, currency: z.string().length(3)
 });
 
 export const nodeSchema = z.object({
-  id: z.string().min(1), layer: layerSchema, kind: z.enum(["material", "equipment", "component", "system", "software", "application"]),
-  name: z.string().min(1), englishName: z.string().optional(), summary: z.string().min(8),
-  technology: z.string().min(20), barriers: z.array(z.string()).min(1), drivers: z.array(z.string()).min(1),
-  risks: z.array(z.string()).min(1), companyIds: z.array(z.string()).min(1), sourceIds: z.array(z.string()).min(1)
+  id: requiredTextSchema, layer: layerSchema, kind: z.enum(["material", "equipment", "component", "system", "software", "application"]),
+  name: requiredTextSchema, englishName: requiredTextSchema.optional(), summary: z.string().trim().min(8),
+  technology: z.string().trim().min(20), barriers: z.array(requiredTextSchema).min(1), drivers: z.array(requiredTextSchema).min(1),
+  risks: z.array(requiredTextSchema).min(1), companyIds: z.array(requiredTextSchema).min(1), sourceIds: z.array(requiredTextSchema).min(1)
 }).superRefine((node, ctx) => {
-  if (node.kind === "material" && node.companyIds.length < 2) ctx.addIssue({ code: "custom", path: ["companyIds"], message: "material nodes require at least two leaders" });
+  if (node.kind === "material" && new Set(node.companyIds).size < 2) ctx.addIssue({ code: "custom", path: ["companyIds"], message: "material nodes require at least two distinct leaders" });
 });
 
-export const sourceSchema = z.object({ id: z.string(), title: z.string(), url: z.string().url(), publisher: z.string(), publishedAt: z.string().date().optional(), checkedAt: z.string().datetime() });
-export const industryEdgeSchema = z.object({ id: z.string(), from: z.string(), to: z.string(), type: z.enum(["supply", "integrate", "deploy"]) });
-export const supplyRelationSchema = z.object({ id: z.string(), supplierId: z.string(), customerId: z.string(), nodeId: z.string(), product: z.string().min(2), status: relationStatusSchema, evidenceSourceIds: z.array(z.string()).min(1), announcedAt: z.string().date().optional() });
-export const marketSnapshotSchema = z.object({ companyId: z.string(), price: z.number().nonnegative(), changePct: z.number(), currency: z.string().length(3), tradedAt: z.string().datetime(), fetchedAt: z.string().datetime(), delayMinutes: z.number().int().nonnegative(), ttmEps: z.number().nullable(), ttmPe: z.number().positive().nullable() });
+export const sourceSchema = z.object({ id: requiredTextSchema, title: requiredTextSchema, url: z.string().url(), publisher: requiredTextSchema, publishedAt: z.string().date().optional(), checkedAt: z.string().datetime() });
+export const industryEdgeSchema = z.object({ id: requiredTextSchema, from: requiredTextSchema, to: requiredTextSchema, type: z.enum(["supply", "integrate", "deploy"]) });
+export const supplyRelationSchema = z.object({ id: requiredTextSchema, supplierId: requiredTextSchema, customerId: requiredTextSchema, nodeId: requiredTextSchema, product: z.string().trim().min(2), status: relationStatusSchema, evidenceSourceIds: z.array(requiredTextSchema).min(1), announcedAt: z.string().date().optional() });
+export const marketSnapshotSchema = z.object({ companyId: requiredTextSchema, price: z.number().nonnegative(), changePct: z.number(), currency: z.string().length(3), tradedAt: z.string().datetime(), fetchedAt: z.string().datetime(), delayMinutes: z.number().int().nonnegative(), ttmEps: z.number().nullable(), ttmPe: z.number().positive().nullable() });
 
 export const atlasSnapshotSchema = z.object({
   nodes: z.array(nodeSchema), companies: z.array(companySchema), industryEdges: z.array(industryEdgeSchema),
   supplyRelations: z.array(supplyRelationSchema), marketSnapshots: z.array(marketSnapshotSchema), sources: z.array(sourceSchema)
 });
 export type AtlasSnapshot = z.infer<typeof atlasSnapshotSchema>;
+export type AtlasMarket = z.infer<typeof marketSchema>;
 ```
 
 - [ ] **Step 4: Run the schema tests**
