@@ -194,6 +194,53 @@ describe("AtlasApp", () => {
     );
   });
 
+  it("uses stage-map subnode search to preview a non-default stage without rewriting stage history", () => {
+    vi.useFakeTimers();
+    const { replace } = renderAtlas();
+    const search = screen.getByRole("searchbox", {
+      name: "搜索节点、公司或代码",
+    });
+
+    fireEvent.change(search, { target: { value: "光刻胶" } });
+
+    const mainChain = screen.getByRole("region", { name: "AI 产业链 9 段主链" });
+    expect(within(mainChain).getByRole("button", { name: /材料/ })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(screen.getByRole("heading", { name: "材料完整内部流程图" })).toBeInTheDocument();
+    expect(screen.getByText("光刻胶")).toBeInTheDocument();
+    expect(screen.queryByText("没有找到匹配的节点或公司")).not.toBeInTheDocument();
+
+    act(() => vi.advanceTimersByTime(200));
+    expect(replace).toHaveBeenLastCalledWith(
+      "?layer=interconnect&mode=supply&stage=optical-interconnect&q=%E5%85%89%E5%88%BB%E8%83%B6",
+    );
+  });
+
+  it("uses real-node search to preview the HBM stage without URL stage churn", () => {
+    vi.useFakeTimers();
+    const { replace } = renderAtlas();
+    const search = screen.getByRole("searchbox", {
+      name: "搜索节点、公司或代码",
+    });
+
+    fireEvent.change(search, { target: { value: "HBM" } });
+
+    const mainChain = screen.getByRole("region", { name: "AI 产业链 9 段主链" });
+    expect(within(mainChain).getByRole("button", { name: /HBM 存储/ })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(screen.getByRole("heading", { name: "HBM 存储完整内部流程图" })).toBeInTheDocument();
+    expect(screen.getByTestId("node-hbm")).toBeInTheDocument();
+
+    act(() => vi.advanceTimersByTime(200));
+    expect(replace).toHaveBeenLastCalledWith(
+      "?layer=interconnect&mode=supply&stage=optical-interconnect&q=HBM",
+    );
+  });
+
   it("searches within the canvas, reports no results, and resets cleanly", () => {
     vi.useFakeTimers();
     const { replace } = renderAtlas();

@@ -52,11 +52,13 @@ export function StageDataLayer({
                 const realNode = subnode.realNodeId
                   ? nodes.get(subnode.realNodeId)
                   : undefined;
-                const isAlreadyInDiagram =
-                  (realNode ? diagramRealNodeIds.has(realNode.id) : false) ||
-                  diagramLabels.has(subnode.label);
+                const isDuplicateRealNode = realNode
+                  ? diagramRealNodeIds.has(realNode.id)
+                  : false;
+                const shouldDisambiguateLabel =
+                  isDuplicateRealNode || diagramLabels.has(subnode.label);
 
-                return realNode && !isAlreadyInDiagram ? (
+                return realNode && !isDuplicateRealNode ? (
                   <div className="stage-real-node" key={subnode.id}>
                     {subnode.label !== realNode.name ? (
                       <span className="stage-node-alias">{subnode.label}</span>
@@ -77,7 +79,7 @@ export function StageDataLayer({
                       title={subnode.description}
                     >
                     <strong>
-                      {isAlreadyInDiagram
+                      {shouldDisambiguateLabel
                         ? `数据项 · ${subnode.label}`
                         : subnode.label}
                     </strong>

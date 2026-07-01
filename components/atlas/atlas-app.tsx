@@ -15,6 +15,7 @@ import {
 import type { AtlasSnapshot } from "@/lib/atlas/schema";
 import {
   atlasStageById,
+  findStageBySearch,
   getStageIdForNode,
   getStageRealNodeIds,
 } from "@/lib/atlas/stage-map";
@@ -75,12 +76,23 @@ export function AtlasApp({
   const selectedCompany = query.company
     ? companyById.get(query.company)
     : undefined;
+  const normalizedSearch = searchInput.trim().toLocaleLowerCase();
   const selectedStageId = selectedNode
     ? getStageIdForNode(selectedNode.id) ?? query.stage
     : query.stage;
-  const selectedStageRealNodeIds = atlasStageById.get(selectedStageId)
-    ? getStageRealNodeIds(atlasStageById.get(selectedStageId)!)
-    : new Set<string>();
+  const selectedStage = atlasStageById.get(selectedStageId);
+  const selectedStageRealNodeIds = useMemo(
+    () => (selectedStage ? getStageRealNodeIds(selectedStage) : new Set<string>()),
+    [selectedStage],
+  );
+  const searchStage = useMemo(
+    () => findStageBySearch(normalizedSearch),
+    [normalizedSearch],
+  );
+  const searchStageRealNodeIds = useMemo(
+    () => (searchStage ? getStageRealNodeIds(searchStage) : new Set<string>()),
+    [searchStage],
+  );
 
   const updateQuery = (
     patch: Partial<AtlasQueryState>,
@@ -143,7 +155,6 @@ export function AtlasApp({
     return () => window.clearTimeout(timer);
   }, [query.search, searchInput]);
 
-  const normalizedSearch = searchInput.trim().toLocaleLowerCase();
   const matchingCompanyIds = new Set<string>();
   if (normalizedSearch) {
     for (const company of initialSnapshot.companies) {
@@ -165,6 +176,7 @@ export function AtlasApp({
     ) {
       return true;
     }
+    if (searchStageRealNodeIds.has(node.id)) return true;
     const matchesNode = [node.name, node.englishName ?? "", node.summary]
       .join(" ")
       .toLocaleLowerCase()
@@ -217,7 +229,7 @@ export function AtlasApp({
         selectedStageId={selectedStageId}
         selectedNodeId={selectedNode?.id ?? null}
         search={normalizedSearch}
-        empty={posterNodes.length === 0}
+        empty={posterNodes.length === 0 && !searchStage}
         onSelectStage={(stage) => {
           setFocusAnchorNodeId(null);
           updateQuery({ stage, node: null, company: null }, "replace");

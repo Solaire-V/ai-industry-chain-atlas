@@ -1527,6 +1527,35 @@ const normalizeSearch = (value: string) => value.trim().toLowerCase();
 export function findStageBySearch(search: string): AtlasStage | null {
   const normalized = normalizeSearch(search);
   if (!normalized) return null;
+
+  for (const stage of atlasStages) {
+    const exactTerms = [
+      stage.id,
+      stage.name,
+      stage.shortName,
+      ...stage.representativeNodeIds,
+      ...[
+        ...stage.diagram.inputs,
+        ...stage.diagram.core,
+        ...stage.diagram.outputs,
+      ].flatMap((node) => [
+        node.id,
+        node.label,
+        node.realNodeId ?? "",
+      ]),
+      ...stage.groups.flatMap((group) =>
+        group.nodes.flatMap((node) => [
+          node.id,
+          node.label,
+          node.realNodeId ?? "",
+        ]),
+      ),
+    ];
+    if (exactTerms.some((term) => normalizeSearch(term) === normalized)) {
+      return stage;
+    }
+  }
+
   for (const stage of atlasStages) {
     const haystack = [
       stage.id,

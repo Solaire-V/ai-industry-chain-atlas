@@ -66,7 +66,10 @@ export function ThreeLayerAtlasCanvas({
     ? getStageIdForNode(selectedNodeId)
     : null;
   const searchStage = findStageBySearch(search);
-  const activeStageId = selectedNodeStageId ?? selectedStageId ?? searchStage?.id;
+  const pinnedStageId =
+    selectedStageId !== defaultStageId ? selectedStageId : null;
+  const activeStageId =
+    selectedNodeStageId ?? pinnedStageId ?? searchStage?.id ?? selectedStageId;
   const stage =
     atlasStageById.get(activeStageId) ??
     atlasStageById.get(defaultStageId) ??
