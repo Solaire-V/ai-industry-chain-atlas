@@ -6,6 +6,7 @@ import {
   defaultStageId,
   findStageBySearch,
   getStageIdForNode,
+  getStageIdsForNode,
   getStageRealNodeIds,
   mainChainConnections,
 } from "@/lib/atlas/stage-map";
@@ -106,10 +107,32 @@ describe("stage-map", () => {
     );
   });
 
+  it("makes duplicate real-node ownership explicit", () => {
+    expect(getStageIdsForNode("hbm")).toEqual(
+      expect.arrayContaining(["hbm-memory", "advanced-packaging"]),
+    );
+    expect(getStageIdForNode("hbm")).toBe("hbm-memory");
+
+    expect(getStageIdsForNode("low-loss-ccl")).toEqual(
+      expect.arrayContaining(["materials", "board-system"]),
+    );
+    expect(getStageIdForNode("low-loss-ccl")).toBe("materials");
+
+    expect(getStageIdsForNode("ai-cluster")).toEqual(
+      expect.arrayContaining(["server-network", "compute-applications"]),
+    );
+    expect(getStageIdForNode("ai-cluster")).toBe("server-network");
+
+    expect(getStageIdForNode("cpo")).toBe("optical-interconnect");
+    expect(getStageIdForNode("high-layer-pcb")).toBe("board-system");
+    expect(getStageIdsForNode("missing-node")).toEqual([]);
+  });
+
   it("searches stage names, group names, subnode labels, and real node ids", () => {
     expect(findStageBySearch("光刻胶")?.id).toBe("materials");
     expect(findStageBySearch("高速测试")?.id).toBe("equipment");
     expect(findStageBySearch("CPO")?.id).toBe("optical-interconnect");
+    expect(findStageBySearch("近端高速电信号")?.id).toBe("optical-interconnect");
     expect(findStageBySearch("AIDC")?.id).toBe("compute-applications");
     expect(findStageBySearch("not found")).toBeNull();
   });

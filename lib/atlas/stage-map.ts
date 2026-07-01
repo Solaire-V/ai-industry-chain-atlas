@@ -1446,7 +1446,10 @@ export const atlasStages: readonly AtlasStage[] = [
 
 export const defaultStageId: AtlasStageId = "optical-interconnect";
 
-export const atlasStageById = new Map<AtlasStageId, AtlasStage>(
+export const atlasStageById: ReadonlyMap<AtlasStageId, AtlasStage> = new Map<
+  AtlasStageId,
+  AtlasStage
+>(
   atlasStages.map((stage) => [stage.id, stage]),
 );
 
@@ -1484,14 +1487,42 @@ export function getStageRealNodeIds(stage: AtlasStage): ReadonlySet<string> {
   return nodeIds;
 }
 
-export function getStageIdForNode(nodeId: string): AtlasStageId | null {
-  for (const stage of atlasStages) {
-    if (getStageRealNodeIds(stage).has(nodeId)) return stage.id;
-  }
-  return null;
+export const primaryStageByRealNodeId: ReadonlyMap<string, AtlasStageId> = new Map<
+  string,
+  AtlasStageId
+>([
+  ["inp-material", "materials"],
+  ["silicon-photonics-material", "materials"],
+  ["optical-fiber-preform", "materials"],
+  ["low-loss-ccl", "materials"],
+  ["switch-asic", "ai-chip"],
+  ["hbm", "hbm-memory"],
+  ["high-layer-pcb", "board-system"],
+  ["optical-chip", "optical-interconnect"],
+  ["laser", "optical-interconnect"],
+  ["modulator", "optical-interconnect"],
+  ["tia-driver", "optical-interconnect"],
+  ["optical-dsp", "optical-interconnect"],
+  ["fa-mpo", "optical-interconnect"],
+  ["optical-engine", "optical-interconnect"],
+  ["cpo", "optical-interconnect"],
+  ["pluggable-optics", "optical-interconnect"],
+  ["ai-server", "server-network"],
+  ["ethernet-switch", "server-network"],
+  ["ai-cluster", "server-network"],
+]);
+
+export function getStageIdsForNode(nodeId: string): readonly AtlasStageId[] {
+  return atlasStages
+    .filter((stage) => getStageRealNodeIds(stage).has(nodeId))
+    .map(({ id }) => id);
 }
 
-const normalizeSearch = (value: string) => value.trim().toLocaleLowerCase();
+export function getStageIdForNode(nodeId: string): AtlasStageId | null {
+  return primaryStageByRealNodeId.get(nodeId) ?? null;
+}
+
+const normalizeSearch = (value: string) => value.trim().toLowerCase();
 
 export function findStageBySearch(search: string): AtlasStage | null {
   const normalized = normalizeSearch(search);
@@ -1507,6 +1538,16 @@ export function findStageBySearch(search: string): AtlasStage | null {
       stage.summary,
       stage.diagram.title,
       stage.diagram.summary,
+      ...[
+        ...stage.diagram.inputs,
+        ...stage.diagram.core,
+        ...stage.diagram.outputs,
+      ].flatMap((node) => [
+        node.id,
+        node.label,
+        node.detail,
+        node.realNodeId ?? "",
+      ]),
       ...stage.representativeNodeIds,
       ...stage.groups.flatMap((group) => [
         group.title,
@@ -1521,7 +1562,7 @@ export function findStageBySearch(search: string): AtlasStage | null {
       ...stage.internalConnections.map((connection) => connection.label),
     ]
       .join(" ")
-      .toLocaleLowerCase();
+      .toLowerCase();
     if (haystack.includes(normalized)) return stage;
   }
   return null;
