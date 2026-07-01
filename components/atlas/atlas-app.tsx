@@ -95,7 +95,8 @@ export function AtlasApp({
   }
 
   const canvasNodes = initialSnapshot.nodes.filter((node) => {
-    if (!normalizedSearch) return canvasNodeIds.has(node.id);
+    if (!canvasNodeIds.has(node.id)) return false;
+    if (!normalizedSearch) return true;
     const matchesNode = [node.name, node.englishName ?? "", node.summary]
       .join(" ")
       .toLocaleLowerCase()

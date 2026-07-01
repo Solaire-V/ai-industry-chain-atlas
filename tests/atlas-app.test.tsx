@@ -36,6 +36,8 @@ describe("AtlasApp", () => {
     expect(within(dialog).getByText("博通")).toBeInTheDocument();
     expect(within(dialog).getByText("AVGO")).toBeInTheDocument();
     expect(within(dialog).getByRole("link", { name: /Broadcom Delivers 51.2-Tbps/ })).toBeInTheDocument();
+    expect(within(dialog).getByRole("heading", { name: "主要来源" })).toBeInTheDocument();
+    expect(within(dialog).queryByText("证据支持的供需关系")).not.toBeInTheDocument();
     expect(within(dialog).getByRole("img")).not.toHaveAttribute(
       "alt",
       expect.stringContaining("博通"),
@@ -83,6 +85,7 @@ describe("AtlasApp", () => {
 
     fireEvent.change(search, { target: { value: "AVGO" } });
     expect(screen.getByTestId("node-cpo")).toBeInTheDocument();
+    expect(screen.queryByTestId("node-ai-cluster")).not.toBeInTheDocument();
     expect(replace).toHaveBeenLastCalledWith(
       "?layer=interconnect&mode=all&q=AVGO",
     );
@@ -101,7 +104,9 @@ describe("AtlasApp", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /博通 AVGO/ }));
 
-    expect(screen.getByText("已选择：博通（AVGO）")).toBeInTheDocument();
+    expect(
+      screen.getByText("已选择公司，行情与供需详情将在公司面板加载：博通（AVGO）"),
+    ).toBeInTheDocument();
     expect(replace).toHaveBeenLastCalledWith(
       "?layer=interconnect&mode=all&node=cpo&company=broadcom",
     );

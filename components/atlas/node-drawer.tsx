@@ -99,13 +99,13 @@ export function NodeDrawer({
           </div>
           {selectedCompany ? (
             <p className="selected-company-placeholder">
-              已选择：{selectedCompany.name}（{selectedCompany.ticker}）
+              已选择公司，行情与供需详情将在公司面板加载：{selectedCompany.name}（{selectedCompany.ticker}）
             </p>
           ) : null}
         </section>
 
         <section>
-          <h3>证据支持的供需关系</h3>
+          <h3>主要来源</h3>
           <ul className="source-list">
             {sources.map((source) => (
               <li key={source.id}>
