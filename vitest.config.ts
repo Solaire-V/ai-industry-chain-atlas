@@ -17,6 +17,7 @@ export default defineConfig({
           name: "node",
           environment: "node",
           include: ["tests/**/*.{test,spec}.ts"],
+          exclude: ["tests/e2e/**"],
         },
       },
       {
