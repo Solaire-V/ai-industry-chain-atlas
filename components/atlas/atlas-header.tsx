@@ -15,8 +15,6 @@ interface AtlasHeaderProps {
   onModeChange: (mode: RelationshipMode) => void;
   onSearchChange: (search: string) => void;
   onSearchBlur: () => void;
-  onToggleLayers: () => void;
-  layersExpanded: boolean;
 }
 
 export function AtlasHeader({
@@ -25,22 +23,11 @@ export function AtlasHeader({
   onModeChange,
   onSearchChange,
   onSearchBlur,
-  onToggleLayers,
-  layersExpanded,
 }: AtlasHeaderProps) {
   return (
     <header className="atlas-header">
       <div className="atlas-brand">AI INDUSTRY ATLAS</div>
       <div className="atlas-update">产业内容 · 2026-06-30</div>
-      <button
-        className="layer-filter-button"
-        type="button"
-        aria-expanded={layersExpanded}
-        aria-controls="atlas-layer-nav"
-        onClick={onToggleLayers}
-      >
-        产业层级
-      </button>
       <label className="atlas-search">
         <span className="visually-hidden">搜索节点、公司或代码</span>
         <input

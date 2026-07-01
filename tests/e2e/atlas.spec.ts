@@ -18,22 +18,16 @@ test("explores CPO and opens a company research drawer", async ({ page }) => {
   await expect(page).toHaveURL(/company=broadcom/);
 });
 
-test("mobile exposes layer filters and opens the CPO bottom sheet", async ({ page }) => {
+test("mobile exposes the full-chain poster and opens the CPO bottom sheet", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
 
-  const layerToggle = page.getByRole("button", { name: "产业层级" });
-  await expect(layerToggle).toBeVisible();
-  await layerToggle.click();
-  await expect(page.getByRole("navigation", { name: "产业层级" })).toHaveAttribute(
-    "data-expanded",
-    "true",
-  );
-  await page.getByRole("button", { name: /04\s*高速互联/ }).click();
-  await expect(page.getByRole("navigation", { name: "产业层级" })).toHaveAttribute(
-    "data-expanded",
-    "false",
-  );
+  await expect(
+    page.getByRole("heading", { name: "AI 算力产业链全景图谱" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("navigation", { name: "产业层级" }),
+  ).toHaveCount(0);
 
   await page.getByTestId("node-cpo").click();
 

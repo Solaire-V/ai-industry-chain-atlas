@@ -4,9 +4,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { AtlasHeader } from "@/components/atlas/atlas-header";
 import { CompanyDrawer } from "@/components/atlas/company-drawer";
-import { LayerNav, LAYERS } from "@/components/atlas/layer-nav";
 import { NodeDrawer } from "@/components/atlas/node-drawer";
-import { RelationshipCanvas } from "@/components/atlas/relationship-canvas";
+import { PosterAtlasCanvas } from "@/components/atlas/poster-atlas-canvas";
 import { filterEdgesByMode } from "@/lib/atlas/graph";
 import {
   DEFAULT_ATLAS_QUERY,
@@ -14,7 +13,7 @@ import {
   serializeAtlasQuery,
   type AtlasQueryState,
 } from "@/lib/atlas/query-state";
-import type { AtlasNode, AtlasSnapshot } from "@/lib/atlas/schema";
+import type { AtlasSnapshot } from "@/lib/atlas/schema";
 
 export interface AtlasHistoryAdapter {
   push: (url: string) => void;
@@ -56,7 +55,6 @@ export function AtlasApp({
   const [searchInput, setSearchInput] = useState(() =>
     normalizeInitialQuery(initialQuery).search,
   );
-  const [layersExpanded, setLayersExpanded] = useState(false);
   const [focusAnchorNodeId, setFocusAnchorNodeId] = useState<string | null>(null);
   const queryRef = useRef(query);
   const nodeTriggerRef = useRef<HTMLElement | null>(null);
@@ -135,32 +133,16 @@ export function AtlasApp({
     return () => window.clearTimeout(timer);
   }, [query.search, searchInput]);
 
-  const layer = LAYERS.find(({ id }) => id === query.layer) ?? LAYERS[3];
   const modeEdges = filterEdgesByMode(initialSnapshot.industryEdges, query.mode);
-  const canvasEdgeById = new Map(modeEdges.map((edge) => [edge.id, edge]));
+  const posterEdgeById = new Map(modeEdges.map((edge) => [edge.id, edge]));
   if (selectedNode) {
     for (const edge of initialSnapshot.industryEdges) {
       if (edge.from === selectedNode.id || edge.to === selectedNode.id) {
-        canvasEdgeById.set(edge.id, edge);
+        posterEdgeById.set(edge.id, edge);
       }
     }
   }
-  const canvasEdges = [...canvasEdgeById.values()];
-  const currentLayerIds = new Set(
-    initialSnapshot.nodes
-      .filter((node) => node.layer === query.layer)
-      .map(({ id }) => id),
-  );
-  const canvasNodeIds = new Set(currentLayerIds);
-  if (focusAnchorNodeId) canvasNodeIds.add(focusAnchorNodeId);
-  for (const edge of canvasEdges) {
-    if (currentLayerIds.has(edge.from)) canvasNodeIds.add(edge.to);
-    if (currentLayerIds.has(edge.to)) canvasNodeIds.add(edge.from);
-    if (selectedNode && (edge.from === selectedNode.id || edge.to === selectedNode.id)) {
-      canvasNodeIds.add(edge.from);
-      canvasNodeIds.add(edge.to);
-    }
-  }
+  const posterEdges = [...posterEdgeById.values()];
 
   const normalizedSearch = searchInput.trim().toLocaleLowerCase();
   const matchingCompanyIds = new Set<string>();
@@ -175,8 +157,7 @@ export function AtlasApp({
     }
   }
 
-  const canvasNodes = initialSnapshot.nodes.filter((node) => {
-    if (!canvasNodeIds.has(node.id)) return false;
+  const posterNodes = initialSnapshot.nodes.filter((node) => {
     if (selectedNode?.id === node.id || focusAnchorNodeId === node.id) return true;
     if (!normalizedSearch) return true;
     const matchesNode = [node.name, node.englishName ?? "", node.summary]
@@ -197,12 +178,6 @@ export function AtlasApp({
     nodeTriggerRef.current = target;
     pendingRestoreNodeIdRef.current = null;
   }, [query.company, query.layer, query.node]);
-
-  const selectLayer = (selectedLayer: AtlasNode["layer"]) => {
-    setLayersExpanded(false);
-    setFocusAnchorNodeId(null);
-    updateQuery({ layer: selectedLayer, node: null, company: null });
-  };
 
   const roles = selectedNode
     ? initialSnapshot.companyNodeRoles.filter(
@@ -231,21 +206,14 @@ export function AtlasApp({
             "replace",
           )
         }
-        onToggleLayers={() => setLayersExpanded((expanded) => !expanded)}
-        layersExpanded={layersExpanded}
       />
-      <LayerNav
-        selected={query.layer}
-        expanded={layersExpanded}
-        onSelect={selectLayer}
-      />
-      <RelationshipCanvas
-        title={`${layer?.label ?? "高速互联"} · 产业关系图`}
-        nodes={canvasNodes}
-        edges={canvasEdges}
+      <PosterAtlasCanvas
+        nodes={posterNodes}
+        companies={initialSnapshot.companies}
+        edges={posterEdges}
         mode={query.mode}
         selectedNodeId={selectedNode?.id ?? null}
-        empty={canvasNodes.length === 0}
+        empty={posterNodes.length === 0}
         onSelectNode={(node) => {
           setFocusAnchorNodeId(null);
           nodeTriggerRef.current = document.activeElement as HTMLElement;

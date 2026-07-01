@@ -31,6 +31,21 @@ const renderAtlas = (
 };
 
 describe("AtlasApp", () => {
+  it("renders a single full-chain poster instead of a layer sidebar", () => {
+    renderAtlas();
+
+    expect(
+      screen.queryByRole("navigation", { name: "产业层级" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "AI 算力产业链全景图谱" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("上游基础材料")).toBeInTheDocument();
+    expect(screen.getByText("高速互联与 CPO")).toBeInTheDocument();
+    expect(screen.getByTestId("node-cpo")).toBeInTheDocument();
+    expect(screen.getByTestId("node-ai-cluster")).toBeInTheDocument();
+  });
+
   it("opens the CPO dialog with the sole raster illustration and code-native detail", () => {
     renderAtlas();
 
@@ -74,27 +89,28 @@ describe("AtlasApp", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
-  it("updates layer and relationship mode through canonical shareable URLs", () => {
+  it("keeps legacy layer links compatible while relationship mode remains shareable", () => {
     const { push } = renderAtlas(
       new URLSearchParams("layer=interconnect&mode=all"),
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "03 核心芯片" }));
-    expect(screen.getByRole("heading", { name: "核心芯片 · 产业关系图" })).toBeInTheDocument();
-    expect(push).toHaveBeenLastCalledWith("?layer=chips&mode=all");
+    expect(
+      screen.queryByRole("navigation", { name: "产业层级" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "AI 算力产业链全景图谱" })).toBeInTheDocument();
+    expect(screen.getByTestId("node-hbm")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "直接关系" }));
     expect(screen.getByRole("button", { name: "直接关系" })).toHaveAttribute(
       "aria-pressed",
       "true",
     );
-    expect(push).toHaveBeenLastCalledWith("?layer=chips&mode=supply");
+    expect(push).toHaveBeenLastCalledWith("?layer=interconnect&mode=supply");
   });
 
   it("preserves spaces while typing and replaces the canonical search URL after debounce", () => {
     vi.useFakeTimers();
     const { replace } = renderAtlas();
-    fireEvent.click(screen.getByRole("button", { name: "01 原材料" }));
     const search = screen.getByRole("searchbox", {
       name: "搜索节点、公司或代码",
     });
@@ -106,7 +122,7 @@ describe("AtlasApp", () => {
     expect(replace).not.toHaveBeenCalled();
     act(() => vi.advanceTimersByTime(200));
     expect(replace).toHaveBeenLastCalledWith(
-      "?layer=materials&mode=supply&q=silicon+photonics",
+      "?layer=interconnect&mode=supply&q=silicon+photonics",
     );
   });
 
@@ -117,7 +133,7 @@ describe("AtlasApp", () => {
 
     fireEvent.change(search, { target: { value: "AVGO" } });
     expect(screen.getByTestId("node-cpo")).toBeInTheDocument();
-    expect(screen.queryByTestId("node-ai-cluster")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("node-hbm")).not.toBeInTheDocument();
     act(() => vi.advanceTimersByTime(200));
 
     fireEvent.change(search, { target: { value: "不存在的节点" } });
@@ -411,12 +427,12 @@ describe("AtlasApp", () => {
   it("restores query state from popstate without remounting", () => {
     render(<AtlasApp initialSnapshot={verticalSlice} />);
     fireEvent.click(screen.getByTestId("node-cpo"));
-    fireEvent.click(screen.getByRole("button", { name: "03 核心芯片" }));
+    fireEvent.click(screen.getByRole("button", { name: "全部关系" }));
 
     window.history.pushState(null, "", "?layer=interconnect&mode=supply&node=cpo");
     fireEvent.popState(window);
 
-    expect(screen.getByRole("heading", { name: "高速互联 · 产业关系图" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "AI 算力产业链全景图谱" })).toBeInTheDocument();
     expect(screen.getByRole("dialog", { name: "共封装光学" })).toBeInTheDocument();
   });
 
@@ -457,7 +473,7 @@ describe("AtlasApp", () => {
     expect(push).toHaveBeenCalledTimes(1);
 
     push.mockClear();
-    fireEvent.click(screen.getByRole("button", { name: "03 核心芯片" }));
+    fireEvent.click(screen.getByRole("button", { name: "全部关系" }));
     expect(push).toHaveBeenCalledTimes(1);
   });
 });
