@@ -385,6 +385,29 @@ describe("AtlasApp", () => {
     expect(connectedNode.isConnected).toBe(true);
   });
 
+  it("keeps a role-selected node focusable when it does not match the active search", async () => {
+    renderAtlas(
+      new URLSearchParams(
+        "layer=interconnect&mode=supply&node=cpo&company=broadcom&q=cpo",
+      ),
+    );
+    const companyDialog = screen.getByRole("dialog", { name: "博通" });
+    fireEvent.click(
+      within(companyDialog).getByRole("button", { name: /交换芯片.*Tomahawk/ }),
+    );
+
+    expect(screen.getByRole("dialog", { name: "交换 ASIC" })).toBeInTheDocument();
+    const selectedNode = screen.getByTestId("node-switch-asic");
+    expect(selectedNode).toHaveAttribute("data-selected", "true");
+    expect(screen.queryByTestId("node-hbm")).not.toBeInTheDocument();
+
+    const close = screen.getByRole("button", { name: "关闭详情" });
+    await waitFor(() => expect(close).toHaveFocus());
+    fireEvent.click(close);
+    await waitFor(() => expect(selectedNode).toHaveFocus());
+    expect(selectedNode.isConnected).toBe(true);
+  });
+
   it("restores query state from popstate without remounting", () => {
     render(<AtlasApp initialSnapshot={verticalSlice} />);
     fireEvent.click(screen.getByTestId("node-cpo"));

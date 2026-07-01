@@ -57,6 +57,7 @@ export function AtlasApp({
     normalizeInitialQuery(initialQuery).search,
   );
   const [layersExpanded, setLayersExpanded] = useState(false);
+  const [focusAnchorNodeId, setFocusAnchorNodeId] = useState<string | null>(null);
   const queryRef = useRef(query);
   const nodeTriggerRef = useRef<HTMLElement | null>(null);
   const pendingRestoreNodeIdRef = useRef<string | null>(null);
@@ -86,6 +87,7 @@ export function AtlasApp({
   };
 
   const closeNodeDrawer = () => {
+    if (selectedNode) setFocusAnchorNodeId(selectedNode.id);
     updateQuery({ node: null, company: null });
     nodeTriggerRef.current?.focus();
   };
@@ -150,6 +152,7 @@ export function AtlasApp({
       .map(({ id }) => id),
   );
   const canvasNodeIds = new Set(currentLayerIds);
+  if (focusAnchorNodeId) canvasNodeIds.add(focusAnchorNodeId);
   for (const edge of canvasEdges) {
     if (currentLayerIds.has(edge.from)) canvasNodeIds.add(edge.to);
     if (currentLayerIds.has(edge.to)) canvasNodeIds.add(edge.from);
@@ -174,6 +177,7 @@ export function AtlasApp({
 
   const canvasNodes = initialSnapshot.nodes.filter((node) => {
     if (!canvasNodeIds.has(node.id)) return false;
+    if (selectedNode?.id === node.id || focusAnchorNodeId === node.id) return true;
     if (!normalizedSearch) return true;
     const matchesNode = [node.name, node.englishName ?? "", node.summary]
       .join(" ")
@@ -196,6 +200,7 @@ export function AtlasApp({
 
   const selectLayer = (selectedLayer: AtlasNode["layer"]) => {
     setLayersExpanded(false);
+    setFocusAnchorNodeId(null);
     updateQuery({ layer: selectedLayer, node: null, company: null });
   };
 
@@ -216,7 +221,10 @@ export function AtlasApp({
         mode={query.mode}
         search={searchInput}
         onModeChange={(mode) => updateQuery({ mode })}
-        onSearchChange={setSearchInput}
+        onSearchChange={(nextSearch) => {
+          setFocusAnchorNodeId(null);
+          setSearchInput(nextSearch);
+        }}
         onSearchBlur={() =>
           updateQuery(
             { search: searchInput, node: null, company: null },
@@ -239,10 +247,12 @@ export function AtlasApp({
         selectedNodeId={selectedNode?.id ?? null}
         empty={canvasNodes.length === 0}
         onSelectNode={(node) => {
+          setFocusAnchorNodeId(null);
           nodeTriggerRef.current = document.activeElement as HTMLElement;
           updateQuery({ node, company: null });
         }}
         onResetSearch={() => {
+          setFocusAnchorNodeId(null);
           setSearchInput("");
           updateQuery({ search: "", node: null, company: null }, "replace");
         }}
@@ -259,6 +269,7 @@ export function AtlasApp({
           sources={initialSnapshot.sources}
           onBack={closeCompanyDrawer}
           onSelectNode={(node) => {
+            setFocusAnchorNodeId(null);
             pendingRestoreNodeIdRef.current = node.id;
             updateQuery({ layer: node.layer, node: node.id, company: null })
           }}
