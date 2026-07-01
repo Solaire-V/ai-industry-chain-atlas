@@ -14,6 +14,7 @@ interface AtlasHeaderProps {
   search: string;
   onModeChange: (mode: RelationshipMode) => void;
   onSearchChange: (search: string) => void;
+  onSearchBlur: () => void;
   onToggleLayers: () => void;
   layersExpanded: boolean;
 }
@@ -23,6 +24,7 @@ export function AtlasHeader({
   search,
   onModeChange,
   onSearchChange,
+  onSearchBlur,
   onToggleLayers,
   layersExpanded,
 }: AtlasHeaderProps) {
@@ -47,9 +49,10 @@ export function AtlasHeader({
           placeholder="搜索节点、公司或代码"
           value={search}
           onChange={(event) => onSearchChange(event.currentTarget.value)}
+          onBlur={onSearchBlur}
         />
       </label>
-      <div className="relationship-controls" aria-label="关系模式">
+      <div className="relationship-controls" role="group" aria-label="关系模式">
         <span className="relationship-label">关系模式</span>
         {relationshipControls.map((control) => (
           <button

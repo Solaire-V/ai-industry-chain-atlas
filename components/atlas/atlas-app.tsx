@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { AtlasHeader } from "@/components/atlas/atlas-header";
 import { LayerNav, LAYERS } from "@/components/atlas/layer-nav";
@@ -16,6 +16,7 @@ import {
 import type { AtlasNode, AtlasSnapshot } from "@/lib/atlas/schema";
 
 export interface AtlasHistoryAdapter {
+  push: (url: string) => void;
   replace: (url: string) => void;
 }
 
@@ -26,6 +27,9 @@ interface AtlasAppProps {
 }
 
 const defaultHistoryAdapter: AtlasHistoryAdapter = {
+  push(url) {
+    window.history.pushState(window.history.state, "", url);
+  },
   replace(url) {
     window.history.replaceState(window.history.state, "", url);
   },
@@ -48,40 +52,100 @@ export function AtlasApp({
   const [query, setQuery] = useState<AtlasQueryState>(() =>
     normalizeInitialQuery(initialQuery),
   );
+  const [searchInput, setSearchInput] = useState(() =>
+    normalizeInitialQuery(initialQuery).search,
+  );
   const [layersExpanded, setLayersExpanded] = useState(false);
+  const nodeTriggerRef = useRef<HTMLElement | null>(null);
+
+  const writeQuery = (
+    current: AtlasQueryState,
+    patch: Partial<AtlasQueryState>,
+    method: "push" | "replace" = "push",
+  ) => {
+    const next = parseAtlasQuery(serializeAtlasQuery({ ...current, ...patch }));
+    historyAdapter[method](`?${serializeAtlasQuery(next).toString()}`);
+    return next;
+  };
+
+  const updateQuery = (
+    patch: Partial<AtlasQueryState>,
+    method: "push" | "replace" = "push",
+  ) => {
+    setQuery((current) => writeQuery(current, patch, method));
+  };
+
+  const closeDrawer = () => {
+    updateQuery({ node: null, company: null });
+    nodeTriggerRef.current?.focus();
+  };
 
   useEffect(() => {
     if (!query.node) return;
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
-      setQuery((current) => {
-        const next = { ...current, node: null, company: null };
-        historyAdapter.replace(`?${serializeAtlasQuery(next).toString()}`);
-        return next;
-      });
+      closeDrawer();
     };
     document.addEventListener("keydown", closeOnEscape);
     return () => document.removeEventListener("keydown", closeOnEscape);
   }, [historyAdapter, query.node]);
 
+  useEffect(() => {
+    const restoreQuery = () => {
+      const restored = parseAtlasQuery(new URLSearchParams(window.location.search));
+      setQuery(restored);
+      setSearchInput(restored.search);
+    };
+    window.addEventListener("popstate", restoreQuery);
+    return () => window.removeEventListener("popstate", restoreQuery);
+  }, []);
+
+  useEffect(() => {
+    const canonicalSearch = parseAtlasQuery(
+      serializeAtlasQuery({ ...query, search: searchInput }),
+    ).search;
+    if (canonicalSearch === query.search) return;
+    const timer = window.setTimeout(() => {
+      updateQuery(
+        { search: searchInput, node: null, company: null },
+        "replace",
+      );
+    }, 200);
+    return () => window.clearTimeout(timer);
+  }, [query.search, searchInput]);
+
   const companyById = new Map(
     initialSnapshot.companies.map((company) => [company.id, company]),
   );
   const nodeById = new Map(initialSnapshot.nodes.map((node) => [node.id, node]));
+  const selectedNode = query.node ? nodeById.get(query.node) : undefined;
   const layer = LAYERS.find(({ id }) => id === query.layer) ?? LAYERS[3];
   const modeEdges = filterEdgesByMode(initialSnapshot.industryEdges, query.mode);
+  const canvasEdgeById = new Map(modeEdges.map((edge) => [edge.id, edge]));
+  if (selectedNode) {
+    for (const edge of initialSnapshot.industryEdges) {
+      if (edge.from === selectedNode.id || edge.to === selectedNode.id) {
+        canvasEdgeById.set(edge.id, edge);
+      }
+    }
+  }
+  const canvasEdges = [...canvasEdgeById.values()];
   const currentLayerIds = new Set(
     initialSnapshot.nodes
       .filter((node) => node.layer === query.layer)
       .map(({ id }) => id),
   );
   const canvasNodeIds = new Set(currentLayerIds);
-  for (const edge of modeEdges) {
+  for (const edge of canvasEdges) {
     if (currentLayerIds.has(edge.from)) canvasNodeIds.add(edge.to);
     if (currentLayerIds.has(edge.to)) canvasNodeIds.add(edge.from);
+    if (selectedNode && (edge.from === selectedNode.id || edge.to === selectedNode.id)) {
+      canvasNodeIds.add(edge.from);
+      canvasNodeIds.add(edge.to);
+    }
   }
 
-  const normalizedSearch = query.search.toLocaleLowerCase();
+  const normalizedSearch = searchInput.trim().toLocaleLowerCase();
   const matchingCompanyIds = new Set<string>();
   if (normalizedSearch) {
     for (const company of initialSnapshot.companies) {
@@ -106,18 +170,6 @@ export function AtlasApp({
     );
     return matchesNode || matchesCompany;
   });
-  const selectedNode = query.node ? nodeById.get(query.node) : undefined;
-
-  const updateQuery = (patch: Partial<AtlasQueryState>) => {
-    setQuery((current) => {
-      const next = parseAtlasQuery(
-        serializeAtlasQuery({ ...current, ...patch }),
-      );
-      historyAdapter.replace(`?${serializeAtlasQuery(next).toString()}`);
-      return next;
-    });
-  };
-
   const selectLayer = (selectedLayer: AtlasNode["layer"]) => {
     setLayersExpanded(false);
     updateQuery({ layer: selectedLayer, node: null, company: null });
@@ -138,9 +190,15 @@ export function AtlasApp({
     <div className="atlas-app">
       <AtlasHeader
         mode={query.mode}
-        search={query.search}
+        search={searchInput}
         onModeChange={(mode) => updateQuery({ mode })}
-        onSearchChange={(search) => updateQuery({ search, node: null, company: null })}
+        onSearchChange={setSearchInput}
+        onSearchBlur={() =>
+          updateQuery(
+            { search: searchInput, node: null, company: null },
+            "replace",
+          )
+        }
         onToggleLayers={() => setLayersExpanded((expanded) => !expanded)}
         layersExpanded={layersExpanded}
       />
@@ -152,12 +210,18 @@ export function AtlasApp({
       <RelationshipCanvas
         title={`${layer?.label ?? "高速互联"} · 产业关系图`}
         nodes={canvasNodes}
-        edges={modeEdges}
+        edges={canvasEdges}
         mode={query.mode}
         selectedNodeId={selectedNode?.id ?? null}
         empty={canvasNodes.length === 0}
-        onSelectNode={(node) => updateQuery({ node, company: null })}
-        onResetSearch={() => updateQuery({ search: "", node: null, company: null })}
+        onSelectNode={(node) => {
+          nodeTriggerRef.current = document.activeElement as HTMLElement;
+          updateQuery({ node, company: null });
+        }}
+        onResetSearch={() => {
+          setSearchInput("");
+          updateQuery({ search: "", node: null, company: null }, "replace");
+        }}
       />
       {selectedNode ? (
         <NodeDrawer
@@ -169,7 +233,7 @@ export function AtlasApp({
             query.company && companyById.has(query.company) ? query.company : null
           }
           onSelectCompany={(company) => updateQuery({ company })}
-          onClose={() => updateQuery({ node: null, company: null })}
+          onClose={closeDrawer}
         />
       ) : null}
     </div>

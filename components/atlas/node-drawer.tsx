@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 
 import type {
@@ -26,31 +27,46 @@ export function NodeDrawer({
   onSelectCompany,
   onClose,
 }: NodeDrawerProps) {
+  const [imageUnavailable, setImageUnavailable] = useState(false);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
   const companyById = new Map(companies.map((company) => [company.id, company]));
   const selectedCompany = selectedCompanyId
     ? companyById.get(selectedCompanyId)
     : undefined;
   const titleId = `node-drawer-title-${node.id}`;
 
+  useEffect(() => {
+    closeButtonRef.current?.focus();
+    setImageUnavailable(false);
+  }, [node.id]);
+
   return (
     <aside
       className="node-drawer"
       role="dialog"
       aria-modal="false"
-      aria-label={node.name}
+      aria-labelledby={titleId}
     >
-      <button className="drawer-close" type="button" aria-label="关闭详情" onClick={onClose}>
+      <button ref={closeButtonRef} className="drawer-close" type="button" aria-label="关闭详情" onClick={onClose}>
         ×
       </button>
       {node.id === "cpo" ? (
         <figure className="drawer-media">
-          <Image
-            src="/images/cpo-technical-cutaway.png"
-            alt="CPO 技术剖面示意图"
-            width={1672}
-            height={941}
-            priority
-          />
+          {imageUnavailable ? (
+            <div className="drawer-media-fallback" role="status">
+              技术示意图暂不可用
+            </div>
+          ) : (
+            <Image
+              src="/images/cpo-technical-cutaway.png"
+              alt="CPO 技术剖面示意图"
+              width={1672}
+              height={941}
+              sizes="(max-width: 640px) 100vw, (max-width: 1200px) 40vw, 440px"
+              priority
+              onError={() => setImageUnavailable(true)}
+            />
+          )}
           <figcaption>AI 生成技术示意图</figcaption>
         </figure>
       ) : null}
@@ -58,7 +74,7 @@ export function NodeDrawer({
       <div className="drawer-content">
         <header className="drawer-title-block">
           <h2 id={titleId}>
-            {node.id === "cpo" ? "CPO / 共封装光学" : node.name}
+            {node.id === "cpo" ? <><span aria-hidden="true">CPO / </span>{node.name}</> : node.name}
           </h2>
           {node.englishName ? <p>{node.englishName}</p> : null}
         </header>

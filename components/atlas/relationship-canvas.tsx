@@ -49,6 +49,7 @@ export function RelationshipCanvas({
   );
   const layout = layoutByRank(nodeIds, visibleEdges);
   const positionById = new Map(layout.map((position) => [position.id, position]));
+  const nodeById = new Map(nodes.map((node) => [node.id, node]));
   const related = selectedNodeId
     ? getNeighborhood(selectedNodeId, visibleEdges)
     : null;
@@ -70,6 +71,16 @@ export function RelationshipCanvas({
           </div>
         ) : (
           <div className="relationship-canvas" style={{ width, minHeight: height }}>
+            <div className="visually-hidden" aria-label="可见产业关系">
+              <h2>可见产业关系</h2>
+              <ul>
+                {visibleEdges.map((edge) => (
+                  <li key={`summary-${edge.id}`}>
+                    {nodeById.get(edge.from)?.name ?? edge.from} → {nodeById.get(edge.to)?.name ?? edge.to}（{edge.type}）
+                  </li>
+                ))}
+              </ul>
+            </div>
             <svg
               className="relationship-lines"
               width={width}

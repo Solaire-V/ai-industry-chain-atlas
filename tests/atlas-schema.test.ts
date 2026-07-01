@@ -6,6 +6,7 @@ import {
   companySchema,
   marketSchema,
   nodeSchema,
+  sourceSchema,
   supplyRelationSchema,
   type AtlasMarket,
 } from "@/lib/atlas/schema";
@@ -121,6 +122,18 @@ const expectSnapshotIssueAt = (
 };
 
 describe("atlas domain contracts", () => {
+  it.each(["javascript:alert(1)", "data:text/plain,unsafe"])(
+    "rejects unsafe source URL protocol %s",
+    (url) => {
+      expect(
+        sourceSchema.safeParse({
+          ...validSnapshot.sources[0],
+          url,
+        }).success,
+      ).toBe(false);
+    },
+  );
+
   it("reuses the exported market schema for companies", () => {
     const market: AtlasMarket = "US";
 

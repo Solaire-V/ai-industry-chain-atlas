@@ -76,7 +76,12 @@ export const nodeSchema = z
 export const sourceSchema = z.object({
   id: requiredStringSchema,
   title: requiredStringSchema,
-  url: z.string().url(),
+  url: z
+    .string()
+    .url()
+    .refine((value) => value.startsWith("https://") || value.startsWith("http://"), {
+      message: "source URL must use http or https",
+    }),
   publisher: requiredStringSchema,
   publishedAt: z.string().date().optional(),
   checkedAt: z.string().datetime(),
