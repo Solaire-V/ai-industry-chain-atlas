@@ -43,7 +43,8 @@ describe("AtlasApp", () => {
     expect(
       screen.getByRole("heading", { name: "AI 产业链三层地图" }),
     ).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "AI 产业链 9 段主链" })).toBeInTheDocument();
+    const mainChain = screen.getByRole("region", { name: "AI 产业链 9 段主链" });
+    expect(mainChain).toBeInTheDocument();
 
     for (const name of [
       "材料",
@@ -56,7 +57,9 @@ describe("AtlasApp", () => {
       "服务器网络",
       "算力应用",
     ]) {
-      expect(screen.getByRole("button", { name: new RegExp(name) })).toBeInTheDocument();
+      expect(
+        within(mainChain).getByRole("button", { name: new RegExp(name) }),
+      ).toBeInTheDocument();
     }
 
     expect(screen.getByText("完整内部流程图")).toBeInTheDocument();
@@ -65,8 +68,9 @@ describe("AtlasApp", () => {
 
   it("shows material minimum subnodes in the data layer without crowding the main chain", () => {
     renderAtlas();
+    const mainChain = screen.getByRole("region", { name: "AI 产业链 9 段主链" });
 
-    fireEvent.click(screen.getByRole("button", { name: /材料/ }));
+    fireEvent.click(within(mainChain).getByRole("button", { name: /材料/ }));
 
     expect(screen.getByRole("heading", { name: "材料完整内部流程图" })).toBeInTheDocument();
     expect(screen.getByText("硅片")).toBeInTheDocument();
@@ -84,8 +88,9 @@ describe("AtlasApp", () => {
 
   it("shows equipment as an upstream stage and as manufacturing enablement", () => {
     renderAtlas();
+    const mainChain = screen.getByRole("region", { name: "AI 产业链 9 段主链" });
 
-    fireEvent.click(screen.getByRole("button", { name: /设备/ }));
+    fireEvent.click(within(mainChain).getByRole("button", { name: /设备/ }));
 
     expect(screen.getByRole("heading", { name: "设备完整内部流程图" })).toBeInTheDocument();
     expect(screen.getByText("前道设备")).toBeInTheDocument();
@@ -99,8 +104,9 @@ describe("AtlasApp", () => {
 
   it("defaults to optical interconnect and shows a complete CPO internal flow", () => {
     renderAtlas();
+    const mainChain = screen.getByRole("region", { name: "AI 产业链 9 段主链" });
 
-    expect(screen.getByRole("button", { name: /光互联/ })).toHaveAttribute(
+    expect(within(mainChain).getByRole("button", { name: /光互联/ })).toHaveAttribute(
       "aria-pressed",
       "true",
     );
@@ -116,10 +122,9 @@ describe("AtlasApp", () => {
   });
 
   it("opens the CPO dialog with the sole raster illustration and code-native detail", () => {
-    renderAtlas();
-
-    fireEvent.click(screen.getByRole("button", { name: /光通信 \/ CPO/ }));
-    fireEvent.click(screen.getByTestId("node-cpo"));
+    renderAtlas(
+      new URLSearchParams("layer=interconnect&mode=supply&stage=optical-interconnect&node=cpo"),
+    );
 
     const dialog = screen.getByRole("dialog", { name: "共封装光学" });
     expect(within(dialog).getByRole("img", { name: "CPO 技术剖面示意图" })).toHaveAttribute(
@@ -139,10 +144,9 @@ describe("AtlasApp", () => {
   });
 
   it("shows selected CPO relationships without a relationship mode toggle", () => {
-    renderAtlas();
-
-    fireEvent.click(screen.getByRole("button", { name: /光通信 \/ CPO/ }));
-    fireEvent.click(screen.getByTestId("node-cpo"));
+    renderAtlas(
+      new URLSearchParams("layer=interconnect&mode=supply&stage=optical-interconnect&node=cpo"),
+    );
 
     expect(screen.getByTestId("node-optical-engine")).toHaveAttribute(
       "data-related",
@@ -168,7 +172,7 @@ describe("AtlasApp", () => {
       screen.queryByRole("navigation", { name: "产业层级" }),
     ).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "AI 算力模块化地图" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /AI 芯片 \/ 存储/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /AI 芯片/ })).toBeInTheDocument();
     expect(screen.queryByRole("group", { name: "关系模式" })).not.toBeInTheDocument();
   });
 
@@ -211,9 +215,9 @@ describe("AtlasApp", () => {
   });
 
   it("opens Broadcom research from CPO and returns without losing the node", () => {
-    const { push } = renderAtlas();
-    fireEvent.click(screen.getByRole("button", { name: /光通信 \/ CPO/ }));
-    fireEvent.click(screen.getByTestId("node-cpo"));
+    const { push } = renderAtlas(
+      new URLSearchParams("layer=interconnect&mode=supply&stage=optical-interconnect&node=cpo"),
+    );
 
     fireEvent.click(screen.getByRole("button", { name: /博通 AVGO/ }));
 
@@ -284,7 +288,7 @@ describe("AtlasApp", () => {
     fireEvent.click(within(companyDialog).getByRole("button", { name: /交换芯片.*Tomahawk/ }));
     expect(screen.getByRole("dialog", { name: "交换 ASIC" })).toBeInTheDocument();
     expect(push).toHaveBeenLastCalledWith(
-      "?layer=chips&mode=supply&stage=optical-interconnect&node=switch-asic",
+      "?layer=chips&mode=supply&stage=ai-chip&node=switch-asic",
     );
 
     fireEvent.click(screen.getByRole("button", { name: /博通 AVGO/ }));
@@ -497,8 +501,6 @@ describe("AtlasApp", () => {
 
   it("restores query state from popstate without remounting", () => {
     render(<AtlasApp initialSnapshot={verticalSlice} />);
-    fireEvent.click(screen.getByRole("button", { name: /光通信 \/ CPO/ }));
-    fireEvent.click(screen.getByTestId("node-cpo"));
 
     window.history.pushState(
       null,
@@ -512,8 +514,9 @@ describe("AtlasApp", () => {
   });
 
   it("moves focus into the drawer and restores it to the triggering node", async () => {
-    renderAtlas();
-    fireEvent.click(screen.getByRole("button", { name: /光通信 \/ CPO/ }));
+    renderAtlas(
+      new URLSearchParams("layer=interconnect&mode=supply&stage=optical-interconnect&q=共封装"),
+    );
     const trigger = screen.getByTestId("node-cpo");
     trigger.focus();
     fireEvent.click(trigger);
@@ -525,9 +528,9 @@ describe("AtlasApp", () => {
   });
 
   it("shows a code-native fallback when the CPO image cannot load", () => {
-    renderAtlas();
-    fireEvent.click(screen.getByRole("button", { name: /光通信 \/ CPO/ }));
-    fireEvent.click(screen.getByTestId("node-cpo"));
+    renderAtlas(
+      new URLSearchParams("layer=interconnect&mode=supply&stage=optical-interconnect&node=cpo"),
+    );
     fireEvent.error(screen.getByRole("img", { name: "CPO 技术剖面示意图" }));
 
     expect(screen.getByText("技术示意图暂不可用")).toBeInTheDocument();
@@ -541,18 +544,21 @@ describe("AtlasApp", () => {
       <StrictMode>
         <AtlasApp
           initialSnapshot={verticalSlice}
+          initialQuery={new URLSearchParams(
+            "layer=interconnect&mode=supply&stage=optical-interconnect&q=共封装",
+          )}
           historyAdapter={{ push, replace }}
         />
       </StrictMode>,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: /光通信 \/ CPO/ }));
     fireEvent.click(screen.getByTestId("node-cpo"));
     expect(push).toHaveBeenCalledTimes(1);
 
     fireEvent.keyDown(document, { key: "Escape" });
     push.mockClear();
-    fireEvent.click(screen.getByRole("button", { name: /服务器 \/ 网络 \/ AIDC \/ 应用/ }));
+    const mainChain = screen.getByRole("region", { name: "AI 产业链 9 段主链" });
+    fireEvent.click(within(mainChain).getByRole("button", { name: /服务器网络/ }));
     fireEvent.click(screen.getByTestId("node-ai-server"));
     expect(push).toHaveBeenCalledTimes(1);
   });
