@@ -159,7 +159,7 @@ export function AtlasApp({
       );
     }, 200);
     return () => window.clearTimeout(timer);
-  }, [query.search, searchInput]);
+  }, [query.search, query.stage, searchInput]);
 
   const matchingCompanyIds = new Set<string>();
   if (normalizedSearch) {
@@ -223,7 +223,12 @@ export function AtlasApp({
         }}
         onSearchBlur={() =>
           updateQuery(
-            { search: searchInput, node: null, company: null },
+            {
+              search: searchInput,
+              stage: findStageBySearch(searchInput)?.id ?? queryRef.current.stage,
+              node: null,
+              company: null,
+            },
             "replace",
           )
         }

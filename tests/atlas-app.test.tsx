@@ -220,6 +220,42 @@ describe("AtlasApp", () => {
     );
   });
 
+  it("applies stage-aware search when the search box blurs before debounce", () => {
+    vi.useFakeTimers();
+    const { replace } = renderAtlas();
+    const search = screen.getByRole("searchbox", {
+      name: "搜索节点、公司或代码",
+    });
+
+    fireEvent.change(search, { target: { value: "光刻胶" } });
+    fireEvent.blur(search);
+
+    expect(replace).toHaveBeenLastCalledWith(
+      "?layer=interconnect&mode=supply&stage=materials&q=%E5%85%89%E5%88%BB%E8%83%B6",
+    );
+    act(() => vi.advanceTimersByTime(200));
+    expect(replace).toHaveBeenLastCalledWith(
+      "?layer=interconnect&mode=supply&stage=materials&q=%E5%85%89%E5%88%BB%E8%83%B6",
+    );
+  });
+
+  it("keeps the selected stage for unmatched debounced search", () => {
+    vi.useFakeTimers();
+    const { replace } = renderAtlas();
+    const mainChain = screen.getByRole("region", { name: "AI 产业链 9 段主链" });
+    const search = screen.getByRole("searchbox", {
+      name: "搜索节点、公司或代码",
+    });
+
+    fireEvent.click(within(mainChain).getByRole("button", { name: /服务器网络/ }));
+    fireEvent.change(search, { target: { value: "silicon photonics" } });
+    act(() => vi.advanceTimersByTime(200));
+
+    expect(replace).toHaveBeenLastCalledWith(
+      "?layer=interconnect&mode=supply&stage=server-network&q=silicon+photonics",
+    );
+  });
+
   it("uses real-node search to open the HBM stage in the URL", () => {
     vi.useFakeTimers();
     const { replace } = renderAtlas();
