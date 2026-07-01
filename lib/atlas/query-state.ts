@@ -1,6 +1,10 @@
+import {
+  isRelationshipMode,
+  type RelationshipMode,
+} from "@/lib/atlas/graph";
 import { layerSchema, type AtlasNode } from "@/lib/atlas/schema";
 
-export type AtlasQueryMode = "supply" | "value" | "all";
+export type AtlasQueryMode = RelationshipMode;
 
 export interface AtlasQueryState {
   layer: AtlasNode["layer"];
@@ -22,10 +26,8 @@ interface SearchParamsReader {
   get(name: string): string | null;
 }
 
-const queryModes = new Set<AtlasQueryMode>(["supply", "value", "all"]);
-
 const normalizeText = (value: string | null, maxLength: number) =>
-  (value ?? "").trim().slice(0, maxLength);
+  [...(value ?? "").trim()].slice(0, maxLength).join("").trim();
 
 const normalizeOptionalText = (value: string | null, maxLength: number) =>
   normalizeText(value, maxLength) || null;
@@ -36,9 +38,7 @@ const normalizeLayer = (value: string | null): AtlasQueryState["layer"] => {
 };
 
 const normalizeMode = (value: string | null): AtlasQueryMode =>
-  queryModes.has(value as AtlasQueryMode)
-    ? (value as AtlasQueryMode)
-    : DEFAULT_ATLAS_QUERY.mode;
+  isRelationshipMode(value) ? value : DEFAULT_ATLAS_QUERY.mode;
 
 export const parseAtlasQuery = (
   params: SearchParamsReader,

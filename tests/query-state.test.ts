@@ -53,6 +53,30 @@ describe("parseAtlasQuery", () => {
     });
   });
 
+  it("preserves a complete Unicode code point at the search length boundary", () => {
+    const search = `${"a".repeat(79)}😀`;
+    const state = { ...DEFAULT_ATLAS_QUERY, search };
+
+    const serialized = serializeAtlasQuery(state);
+
+    expect(serialized.get("q")).toBe(search);
+    expect(parseAtlasQuery(serialized)).toEqual(state);
+  });
+
+  it("removes whitespace exposed by truncation and stays idempotent", () => {
+    const state = {
+      ...DEFAULT_ATLAS_QUERY,
+      search: `${"a".repeat(79)} y`,
+    };
+
+    const once = serializeAtlasQuery(state);
+    const canonical = parseAtlasQuery(once);
+    const twice = serializeAtlasQuery(canonical);
+
+    expect(once.get("q")).toBe("a".repeat(79));
+    expect(twice.toString()).toBe(once.toString());
+  });
+
   it("does not mutate its URLSearchParams input and uses the first repeated value", () => {
     const params = new URLSearchParams(
       "layer=chips&layer=platform&node=first&node=second",

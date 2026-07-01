@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  RELATIONSHIP_MODES,
   filterEdgesByMode,
   getNeighborhood,
+  isRelationshipMode,
   layoutByRank,
 } from "@/lib/atlas/graph";
 import type { AtlasIndustryEdge } from "@/lib/atlas/schema";
@@ -23,6 +25,13 @@ describe("getNeighborhood", () => {
 });
 
 describe("filterEdgesByMode", () => {
+  it("exposes one runtime source of truth for valid relationship modes", () => {
+    expect(RELATIONSHIP_MODES).toEqual(["supply", "value", "all"]);
+    expect(RELATIONSHIP_MODES.every(isRelationshipMode)).toBe(true);
+    expect(isRelationshipMode("invalid")).toBe(false);
+    expect(isRelationshipMode(null)).toBe(false);
+  });
+
   it("filters supply, value, and all views while preserving order", () => {
     const edges = [
       edge("s1", "a", "b", "supply"),

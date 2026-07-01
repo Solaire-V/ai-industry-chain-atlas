@@ -1,6 +1,14 @@
 import type { AtlasIndustryEdge } from "@/lib/atlas/schema";
 
-export type RelationshipViewMode = "supply" | "value" | "all";
+export const RELATIONSHIP_MODES = ["supply", "value", "all"] as const;
+
+export type RelationshipMode = (typeof RELATIONSHIP_MODES)[number];
+export type RelationshipViewMode = RelationshipMode;
+
+export const isRelationshipMode = (
+  value: unknown,
+): value is RelationshipMode =>
+  RELATIONSHIP_MODES.some((mode) => mode === value);
 
 export type RankedLayoutNode = {
   id: string;
@@ -25,7 +33,7 @@ export function getNeighborhood(
 
 export function filterEdgesByMode(
   edges: readonly AtlasIndustryEdge[],
-  mode: RelationshipViewMode,
+  mode: RelationshipMode,
 ): AtlasIndustryEdge[] {
   if (mode === "all") return edges.slice();
   if (mode === "supply") {
