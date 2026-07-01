@@ -248,7 +248,9 @@ describe("AtlasApp", () => {
     expect(evidence).toHaveAttribute("rel", "noreferrer");
 
     cleanup();
-    renderAtlas(new URLSearchParams("layer=interconnect&mode=supply&node=cpo&company=broadcom"));
+    renderAtlas(
+      new URLSearchParams("layer=interconnect&mode=supply&stage=optical-interconnect&node=cpo&company=broadcom"),
+    );
     expect(screen.getByText("暂无公开确认的供需关系")).toBeInTheDocument();
     expect(screen.queryByText("供应给 英伟达")).not.toBeInTheDocument();
   });
@@ -270,7 +272,7 @@ describe("AtlasApp", () => {
       ],
     };
     renderAtlas(
-      new URLSearchParams("layer=interconnect&mode=supply&node=cpo&company=broadcom"),
+      new URLSearchParams("layer=interconnect&mode=supply&stage=optical-interconnect&node=cpo&company=broadcom"),
       speculative,
     );
 
@@ -282,7 +284,7 @@ describe("AtlasApp", () => {
 
   it("uses company role links coherently and Escape backs out one drawer at a time", () => {
     const { push } = renderAtlas(
-      new URLSearchParams("layer=interconnect&mode=supply&node=cpo&company=broadcom"),
+      new URLSearchParams("layer=interconnect&mode=supply&stage=optical-interconnect&node=cpo&company=broadcom"),
     );
     const companyDialog = screen.getByRole("dialog", { name: "博通" });
     fireEvent.click(within(companyDialog).getByRole("button", { name: /交换芯片.*Tomahawk/ }));
@@ -301,7 +303,7 @@ describe("AtlasApp", () => {
   it("closes the visible node immediately when the company query is invalid", () => {
     const { push } = renderAtlas(
       new URLSearchParams(
-        "layer=interconnect&mode=supply&node=cpo&company=missing-company",
+        "layer=interconnect&mode=supply&stage=optical-interconnect&node=cpo&company=missing-company",
       ),
     );
     expect(screen.getByRole("dialog", { name: "共封装光学" })).toBeInTheDocument();
@@ -344,7 +346,7 @@ describe("AtlasApp", () => {
     };
     renderAtlas(
       new URLSearchParams(
-        "layer=interconnect&mode=supply&node=cpo&company=broadcom",
+        "layer=interconnect&mode=supply&stage=optical-interconnect&node=cpo&company=broadcom",
       ),
       withMarketHistory,
     );
@@ -375,7 +377,7 @@ describe("AtlasApp", () => {
       }],
     });
     renderAtlas(
-      new URLSearchParams("layer=interconnect&mode=supply&node=cpo&company=broadcom"),
+      new URLSearchParams("layer=interconnect&mode=supply&stage=optical-interconnect&node=cpo&company=broadcom"),
       cached,
     );
     expect(screen.getByText(/^缓存至 /)).toBeInTheDocument();
@@ -390,7 +392,7 @@ describe("AtlasApp", () => {
       }],
     });
     renderAtlas(
-      new URLSearchParams("layer=interconnect&mode=supply&node=cpo&company=broadcom"),
+      new URLSearchParams("layer=interconnect&mode=supply&stage=optical-interconnect&node=cpo&company=broadcom"),
       close,
     );
     expect(screen.getByText("最近收盘")).toBeInTheDocument();
@@ -424,7 +426,7 @@ describe("AtlasApp", () => {
       ],
     };
     renderAtlas(
-      new URLSearchParams("layer=interconnect&mode=supply&node=cpo&company=broadcom"),
+      new URLSearchParams("layer=interconnect&mode=supply&stage=optical-interconnect&node=cpo&company=broadcom"),
       evidenceHistory,
     );
     const dialog = screen.getByRole("dialog", { name: "博通" });
@@ -461,7 +463,7 @@ describe("AtlasApp", () => {
 
   it("restores focus to the connected graph node after company role navigation", async () => {
     renderAtlas(
-      new URLSearchParams("layer=interconnect&mode=supply&node=cpo&company=broadcom"),
+      new URLSearchParams("layer=interconnect&mode=supply&stage=optical-interconnect&node=cpo&company=broadcom"),
     );
     const companyDialog = screen.getByRole("dialog", { name: "博通" });
     fireEvent.click(
@@ -479,7 +481,7 @@ describe("AtlasApp", () => {
   it("keeps a role-selected node focusable when it does not match the active search", async () => {
     renderAtlas(
       new URLSearchParams(
-        "layer=interconnect&mode=supply&node=cpo&company=broadcom&q=cpo",
+        "layer=interconnect&mode=supply&stage=optical-interconnect&node=cpo&company=broadcom&q=cpo",
       ),
     );
     const companyDialog = screen.getByRole("dialog", { name: "博通" });
@@ -516,6 +518,11 @@ describe("AtlasApp", () => {
   it("moves focus into the drawer and restores it to the triggering node", async () => {
     renderAtlas(
       new URLSearchParams("layer=interconnect&mode=supply&stage=optical-interconnect&q=共封装"),
+    );
+    const mainChain = screen.getByRole("region", { name: "AI 产业链 9 段主链" });
+    expect(within(mainChain).getByRole("button", { name: /光互联/ })).toHaveAttribute(
+      "aria-pressed",
+      "true",
     );
     const trigger = screen.getByTestId("node-cpo");
     trigger.focus();
