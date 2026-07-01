@@ -176,4 +176,15 @@ describe("serializeAtlasQuery", () => {
       "layer=interconnect&mode=supply&stage=optical-interconnect",
     );
   });
+
+  it("canonicalizes invalid runtime stage values to the default stage", () => {
+    const params = serializeAtlasQuery({
+      ...DEFAULT_ATLAS_QUERY,
+      stage: "invalid-stage",
+    } as unknown as Parameters<typeof serializeAtlasQuery>[0]);
+
+    expect(params.toString()).toBe(
+      "layer=interconnect&mode=supply&stage=optical-interconnect",
+    );
+  });
 });

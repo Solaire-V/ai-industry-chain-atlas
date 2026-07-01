@@ -163,7 +163,7 @@ describe("AtlasApp", () => {
     expect(replace).not.toHaveBeenCalled();
     act(() => vi.advanceTimersByTime(200));
     expect(replace).toHaveBeenLastCalledWith(
-      "?layer=interconnect&mode=supply&q=silicon+photonics",
+      "?layer=interconnect&mode=supply&stage=optical-interconnect&q=silicon+photonics",
     );
   });
 
@@ -182,7 +182,9 @@ describe("AtlasApp", () => {
     fireEvent.click(screen.getByRole("button", { name: "重置搜索" }));
     expect(search).toHaveValue("");
     expect(screen.queryByText("没有找到匹配的节点或公司")).not.toBeInTheDocument();
-    expect(replace).toHaveBeenLastCalledWith("?layer=interconnect&mode=supply");
+    expect(replace).toHaveBeenLastCalledWith(
+      "?layer=interconnect&mode=supply&stage=optical-interconnect",
+    );
   });
 
   it("opens Broadcom research from CPO and returns without losing the node", () => {
@@ -197,13 +199,13 @@ describe("AtlasApp", () => {
     expect(within(companyDialog).getAllByText("N/A").length).toBeGreaterThan(0);
     expect(within(companyDialog).getByText("暂无行情数据")).toBeInTheDocument();
     expect(push).toHaveBeenLastCalledWith(
-      "?layer=interconnect&mode=supply&node=cpo&company=broadcom",
+      "?layer=interconnect&mode=supply&stage=optical-interconnect&node=cpo&company=broadcom",
     );
 
     fireEvent.click(within(companyDialog).getByRole("button", { name: "返回共封装光学" }));
     expect(screen.getByRole("dialog", { name: "共封装光学" })).toBeInTheDocument();
     expect(push).toHaveBeenLastCalledWith(
-      "?layer=interconnect&mode=supply&node=cpo",
+      "?layer=interconnect&mode=supply&stage=optical-interconnect&node=cpo",
     );
   });
 
@@ -259,7 +261,7 @@ describe("AtlasApp", () => {
     fireEvent.click(within(companyDialog).getByRole("button", { name: /交换芯片.*Tomahawk/ }));
     expect(screen.getByRole("dialog", { name: "交换 ASIC" })).toBeInTheDocument();
     expect(push).toHaveBeenLastCalledWith(
-      "?layer=chips&mode=supply&node=switch-asic",
+      "?layer=chips&mode=supply&stage=optical-interconnect&node=switch-asic",
     );
 
     fireEvent.click(screen.getByRole("button", { name: /博通 AVGO/ }));
@@ -280,7 +282,9 @@ describe("AtlasApp", () => {
     fireEvent.keyDown(document, { key: "Escape" });
 
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-    expect(push).toHaveBeenLastCalledWith("?layer=interconnect&mode=supply");
+    expect(push).toHaveBeenLastCalledWith(
+      "?layer=interconnect&mode=supply&stage=optical-interconnect",
+    );
   });
 
   it("selects the latest market snapshot by absolute time rather than ISO text order", () => {
@@ -423,7 +427,9 @@ describe("AtlasApp", () => {
     fireEvent.click(within(dialog).getByRole("button", { name: "返回产业图" }));
 
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-    expect(push).toHaveBeenLastCalledWith("?layer=interconnect&mode=supply");
+    expect(push).toHaveBeenLastCalledWith(
+      "?layer=interconnect&mode=supply&stage=optical-interconnect",
+    );
   });
 
   it("restores focus to the connected graph node after company role navigation", async () => {
