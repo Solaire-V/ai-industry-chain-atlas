@@ -45,6 +45,7 @@ describe("AtlasApp", () => {
     ).toBeInTheDocument();
     const mainChain = screen.getByRole("region", { name: "AI 产业链 9 段主链" });
     expect(mainChain).toBeInTheDocument();
+    expect(mainChain).toHaveClass("stage-chain-section");
 
     for (const name of [
       "材料",
@@ -63,6 +64,7 @@ describe("AtlasApp", () => {
     }
 
     expect(screen.getByText("完整内部流程图")).toBeInTheDocument();
+    expect(screen.getByLabelText("光互联完整内部流程图")).toHaveClass("stage-diagram");
     expect(screen.getByText("可更新数据层")).toBeInTheDocument();
   });
 
