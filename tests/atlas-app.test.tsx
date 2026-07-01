@@ -31,7 +31,7 @@ const renderAtlas = (
 };
 
 describe("AtlasApp", () => {
-  it("renders a modular atlas overview instead of dense filters", () => {
+  it("renders the three-layer 9-stage atlas without legacy side navigation or relationship controls", () => {
     renderAtlas();
 
     expect(
@@ -41,55 +41,78 @@ describe("AtlasApp", () => {
       screen.queryByRole("group", { name: "关系模式" }),
     ).not.toBeInTheDocument();
     expect(
-      screen.getByRole("heading", { name: "AI 算力模块化地图" }),
+      screen.getByRole("heading", { name: "AI 产业链三层地图" }),
     ).toBeInTheDocument();
-    expect(screen.getByText("模块总览")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /半导体材料/ })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /半导体设备/ })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /光通信 \/ CPO/ })).toBeInTheDocument();
-    expect(screen.getByText("半导体材料 → AI 芯片 / 存储")).toBeInTheDocument();
-    expect(screen.getByText("半导体设备 ⇢ 光通信 / CPO")).toBeInTheDocument();
-    expect(
-      screen.getByText("光通信 / CPO → 服务器 / 网络 / AIDC / 应用"),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "AI 产业链 9 段主链" })).toBeInTheDocument();
+
+    for (const name of [
+      "材料",
+      "设备",
+      "AI 芯片",
+      "HBM 存储",
+      "先进封装",
+      "板级系统",
+      "光互联",
+      "服务器网络",
+      "算力应用",
+    ]) {
+      expect(screen.getByRole("button", { name: new RegExp(name) })).toBeInTheDocument();
+    }
+
+    expect(screen.getByText("完整内部流程图")).toBeInTheDocument();
+    expect(screen.getByText("可更新数据层")).toBeInTheDocument();
   });
 
-  it("expands semiconductor materials into smallest subnodes", () => {
+  it("shows material minimum subnodes in the data layer without crowding the main chain", () => {
     renderAtlas();
 
-    fireEvent.click(screen.getByRole("button", { name: /半导体材料/ }));
+    fireEvent.click(screen.getByRole("button", { name: /材料/ }));
 
-    expect(screen.getByRole("heading", { name: "半导体材料" })).toBeInTheDocument();
-    expect(screen.getByText("晶圆 / 衬底")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "材料完整内部流程图" })).toBeInTheDocument();
     expect(screen.getByText("硅片")).toBeInTheDocument();
     expect(screen.getAllByText("SOI").length).toBeGreaterThan(0);
-    expect(screen.getByText("InP 衬底")).toBeInTheDocument();
-    expect(screen.getByText("GaAs 衬底")).toBeInTheDocument();
-    expect(screen.getByText("光刻 / 图形化材料")).toBeInTheDocument();
+    expect(screen.getByText("InP")).toBeInTheDocument();
     expect(screen.getByText("光刻胶")).toBeInTheDocument();
-    expect(screen.getByText("电子特气")).toBeInTheDocument();
+    expect(screen.getByText("电子气体")).toBeInTheDocument();
     expect(screen.getByText("CMP 抛光液")).toBeInTheDocument();
-    expect(screen.getByText("ABF 载板材料")).toBeInTheDocument();
-    expect(screen.getByText("低损耗 CCL")).toBeInTheDocument();
-    expect(screen.getAllByText("光纤预制棒").length).toBeGreaterThan(0);
-    expect(screen.getByText("InP 衬底 → 激光器 / EML")).toBeInTheDocument();
-    expect(screen.getByText("SOI → 硅光芯片")).toBeInTheDocument();
+    expect(screen.getByText("ABF")).toBeInTheDocument();
+    expect(screen.getByText("铜箔")).toBeInTheDocument();
+    expect(screen.getByText("液冷液")).toBeInTheDocument();
+    expect(screen.getByText("公司 / 行情 / PE")).toBeInTheDocument();
+    expect(screen.getByText("供应关系 / 证据")).toBeInTheDocument();
   });
 
-  it("expands semiconductor equipment as manufacturing enablement", () => {
+  it("shows equipment as an upstream stage and as manufacturing enablement", () => {
     renderAtlas();
 
-    fireEvent.click(screen.getByRole("button", { name: /半导体设备/ }));
+    fireEvent.click(screen.getByRole("button", { name: /设备/ }));
 
-    expect(screen.getByRole("heading", { name: "半导体设备" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "设备完整内部流程图" })).toBeInTheDocument();
     expect(screen.getByText("前道设备")).toBeInTheDocument();
     expect(screen.getByText("光刻")).toBeInTheDocument();
     expect(screen.getByText("刻蚀")).toBeInTheDocument();
     expect(screen.getByText("薄膜沉积")).toBeInTheDocument();
-    expect(screen.getByText("封装 / 测试设备")).toBeInTheDocument();
     expect(screen.getByText("探针台 / 测试机")).toBeInTheDocument();
     expect(screen.getByText("光耦合")).toBeInTheDocument();
-    expect(screen.getByText("前道设备 ⇢ AI 芯片 / 光芯片")).toBeInTheDocument();
+    expect(screen.getByText("设备 ⇢ 光互联")).toBeInTheDocument();
+  });
+
+  it("defaults to optical interconnect and shows a complete CPO internal flow", () => {
+    renderAtlas();
+
+    expect(screen.getByRole("button", { name: /光互联/ })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(screen.getByRole("heading", { name: "光互联完整内部流程图" })).toBeInTheDocument();
+    expect(screen.getByText("InP / SOI")).toBeInTheDocument();
+    expect(screen.getByText("光耦合 / 高速测试设备")).toBeInTheDocument();
+    expect(screen.getByText("光芯片")).toBeInTheDocument();
+    expect(screen.getByText("激光器")).toBeInTheDocument();
+    expect(screen.getByText("DSP")).toBeInTheDocument();
+    expect(screen.getByText("光引擎")).toBeInTheDocument();
+    expect(screen.getByText("CPO")).toBeInTheDocument();
+    expect(screen.getByText("交换机 / AI 集群")).toBeInTheDocument();
   });
 
   it("opens the CPO dialog with the sole raster illustration and code-native detail", () => {
@@ -477,7 +500,11 @@ describe("AtlasApp", () => {
     fireEvent.click(screen.getByRole("button", { name: /光通信 \/ CPO/ }));
     fireEvent.click(screen.getByTestId("node-cpo"));
 
-    window.history.pushState(null, "", "?layer=interconnect&mode=supply&node=cpo");
+    window.history.pushState(
+      null,
+      "",
+      "?layer=interconnect&mode=supply&stage=optical-interconnect&node=cpo",
+    );
     fireEvent.popState(window);
 
     expect(screen.getByRole("heading", { name: "AI 算力模块化地图" })).toBeInTheDocument();
