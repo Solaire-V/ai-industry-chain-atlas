@@ -147,8 +147,14 @@ export function AtlasApp({
     ).search;
     if (canonicalSearch === query.search) return;
     const timer = window.setTimeout(() => {
+      const nextSearchStage = findStageBySearch(searchInput);
       updateQuery(
-        { search: searchInput, node: null, company: null },
+        {
+          search: searchInput,
+          stage: nextSearchStage?.id ?? query.stage,
+          node: null,
+          company: null,
+        },
         "replace",
       );
     }, 200);

@@ -196,7 +196,7 @@ describe("AtlasApp", () => {
     );
   });
 
-  it("uses stage-map subnode search to preview a non-default stage without rewriting stage history", () => {
+  it("searches virtual subnodes and opens their owning stage", () => {
     vi.useFakeTimers();
     const { replace } = renderAtlas();
     const search = screen.getByRole("searchbox", {
@@ -216,11 +216,11 @@ describe("AtlasApp", () => {
 
     act(() => vi.advanceTimersByTime(200));
     expect(replace).toHaveBeenLastCalledWith(
-      "?layer=interconnect&mode=supply&stage=optical-interconnect&q=%E5%85%89%E5%88%BB%E8%83%B6",
+      "?layer=interconnect&mode=supply&stage=materials&q=%E5%85%89%E5%88%BB%E8%83%B6",
     );
   });
 
-  it("uses real-node search to preview the HBM stage without URL stage churn", () => {
+  it("uses real-node search to open the HBM stage in the URL", () => {
     vi.useFakeTimers();
     const { replace } = renderAtlas();
     const search = screen.getByRole("searchbox", {
@@ -239,7 +239,24 @@ describe("AtlasApp", () => {
 
     act(() => vi.advanceTimersByTime(200));
     expect(replace).toHaveBeenLastCalledWith(
-      "?layer=interconnect&mode=supply&stage=optical-interconnect&q=HBM",
+      "?layer=interconnect&mode=supply&stage=hbm-memory&q=HBM",
+    );
+  });
+
+  it("preserves the selected stage when closing a node drawer", () => {
+    const { push, replace } = renderAtlas();
+    const mainChain = screen.getByRole("region", { name: "AI 产业链 9 段主链" });
+
+    fireEvent.click(within(mainChain).getByRole("button", { name: /服务器网络/ }));
+    expect(replace).toHaveBeenLastCalledWith(
+      "?layer=interconnect&mode=supply&stage=server-network",
+    );
+
+    fireEvent.click(screen.getByTestId("node-ai-server"));
+    fireEvent.keyDown(document, { key: "Escape" });
+
+    expect(push).toHaveBeenLastCalledWith(
+      "?layer=interconnect&mode=supply&stage=server-network",
     );
   });
 
