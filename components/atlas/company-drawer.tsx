@@ -89,9 +89,13 @@ export function CompanyDrawer({
     : verifiedRelations;
   const latestSnapshot = useMemo(() => {
     let latest: AtlasMarketSnapshot | null = null;
+    let latestEpoch = Number.NEGATIVE_INFINITY;
     for (const item of marketSnapshots) {
       if (item.companyId !== company.id) continue;
-      if (!latest || item.tradedAt > latest.tradedAt) latest = item;
+      const epoch = Date.parse(item.tradedAt);
+      if (Number.isNaN(epoch) || epoch <= latestEpoch) continue;
+      latest = item;
+      latestEpoch = epoch;
     }
     return latest;
   }, [company.id, marketSnapshots]);

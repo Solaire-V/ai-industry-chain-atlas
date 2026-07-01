@@ -59,6 +59,18 @@ export function AtlasApp({
   const [layersExpanded, setLayersExpanded] = useState(false);
   const queryRef = useRef(query);
   const nodeTriggerRef = useRef<HTMLElement | null>(null);
+  const companyById = useMemo(
+    () => new Map(initialSnapshot.companies.map((company) => [company.id, company])),
+    [initialSnapshot.companies],
+  );
+  const nodeById = useMemo(
+    () => new Map(initialSnapshot.nodes.map((node) => [node.id, node])),
+    [initialSnapshot.nodes],
+  );
+  const selectedNode = query.node ? nodeById.get(query.node) : undefined;
+  const selectedCompany = query.company
+    ? companyById.get(query.company)
+    : undefined;
 
   const updateQuery = (
     patch: Partial<AtlasQueryState>,
@@ -83,12 +95,12 @@ export function AtlasApp({
     if (!query.node && !query.company) return;
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
-      if (queryRef.current.company) closeCompanyDrawer();
+      if (selectedCompany) closeCompanyDrawer();
       else closeNodeDrawer();
     };
     document.addEventListener("keydown", closeOnEscape);
     return () => document.removeEventListener("keydown", closeOnEscape);
-  }, [historyAdapter, query.company, query.node]);
+  }, [historyAdapter, query.company, query.node, selectedCompany]);
 
   useEffect(() => {
     const restoreQuery = () => {
@@ -115,18 +127,6 @@ export function AtlasApp({
     return () => window.clearTimeout(timer);
   }, [query.search, searchInput]);
 
-  const companyById = useMemo(
-    () => new Map(initialSnapshot.companies.map((company) => [company.id, company])),
-    [initialSnapshot.companies],
-  );
-  const nodeById = useMemo(
-    () => new Map(initialSnapshot.nodes.map((node) => [node.id, node])),
-    [initialSnapshot.nodes],
-  );
-  const selectedNode = query.node ? nodeById.get(query.node) : undefined;
-  const selectedCompany = query.company
-    ? companyById.get(query.company)
-    : undefined;
   const layer = LAYERS.find(({ id }) => id === query.layer) ?? LAYERS[3];
   const modeEdges = filterEdgesByMode(initialSnapshot.industryEdges, query.mode);
   const canvasEdgeById = new Map(modeEdges.map((edge) => [edge.id, edge]));

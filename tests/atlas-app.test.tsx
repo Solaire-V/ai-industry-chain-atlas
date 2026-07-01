@@ -210,6 +210,60 @@ describe("AtlasApp", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
+  it("closes the visible node immediately when the company query is invalid", () => {
+    const { push } = renderAtlas(
+      new URLSearchParams(
+        "layer=interconnect&mode=supply&node=cpo&company=missing-company",
+      ),
+    );
+    expect(screen.getByRole("dialog", { name: "共封装光学" })).toBeInTheDocument();
+
+    fireEvent.keyDown(document, { key: "Escape" });
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(push).toHaveBeenLastCalledWith("?layer=interconnect&mode=supply");
+  });
+
+  it("selects the latest market snapshot by absolute time rather than ISO text order", () => {
+    const withMarketHistory: AtlasSnapshot = {
+      ...verticalSlice,
+      marketSnapshots: [
+        {
+          companyId: "broadcom",
+          price: 100,
+          changePct: -1,
+          currency: "USD",
+          tradedAt: "2026-07-01T10:00:00+08:00",
+          fetchedAt: "2026-07-01T10:01:00+08:00",
+          delayMinutes: 15,
+          ttmEps: 2,
+          ttmPe: 50,
+        },
+        {
+          companyId: "broadcom",
+          price: 200,
+          changePct: 2,
+          currency: "USD",
+          tradedAt: "2026-07-01T03:00:00Z",
+          fetchedAt: "2026-07-01T03:01:00Z",
+          delayMinutes: 15,
+          ttmEps: 4,
+          ttmPe: 50,
+        },
+      ],
+    };
+    renderAtlas(
+      new URLSearchParams(
+        "layer=interconnect&mode=supply&node=cpo&company=broadcom",
+      ),
+      withMarketHistory,
+    );
+
+    const dialog = screen.getByRole("dialog", { name: "博通" });
+    expect(within(dialog).getByText("USD 200")).toBeInTheDocument();
+    expect(within(dialog).getByText("+2%")).toBeInTheDocument();
+  });
+
   it("restores query state from popstate without remounting", () => {
     render(<AtlasApp initialSnapshot={verticalSlice} />);
     fireEvent.click(screen.getByTestId("node-cpo"));
