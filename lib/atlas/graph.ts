@@ -110,7 +110,7 @@ export function layoutByRank(
     });
   }
 
-  return nodeIds.map((id) => {
+  return uniqueNodeIds.map((id) => {
     const rank = rankByNode.get(id) ?? 0;
     return { id, x: rank * 240, y: yByNode.get(id) ?? 0, rank };
   });
@@ -120,50 +120,59 @@ function findStronglyConnectedComponents(
   nodeIds: readonly string[],
   adjacency: ReadonlyMap<string, readonly string[]>,
 ): Map<string, number> {
-  let nextIndex = 0;
-  const indices = new Map<string, number>();
-  const lowLinks = new Map<string, number>();
-  const stack: string[] = [];
-  const onStack = new Set<string>();
+  const reverseAdjacency = new Map(
+    nodeIds.map((id) => [id, [] as string[]] as const),
+  );
+  for (const [from, children] of adjacency) {
+    for (const to of children) reverseAdjacency.get(to)?.push(from);
+  }
+
+  const visited = new Set<string>();
+  const finishOrder: string[] = [];
+
+  for (const startId of nodeIds) {
+    if (visited.has(startId)) continue;
+    visited.add(startId);
+    const stack = [{ nodeId: startId, nextChildIndex: 0 }];
+
+    while (stack.length > 0) {
+      const frame = stack[stack.length - 1];
+      if (frame === undefined) break;
+      const children = adjacency.get(frame.nodeId) ?? [];
+      const childId = children[frame.nextChildIndex];
+
+      if (childId !== undefined) {
+        frame.nextChildIndex += 1;
+        if (!visited.has(childId)) {
+          visited.add(childId);
+          stack.push({ nodeId: childId, nextChildIndex: 0 });
+        }
+        continue;
+      }
+
+      finishOrder.push(frame.nodeId);
+      stack.pop();
+    }
+  }
+
   const componentByNode = new Map<string, number>();
   let componentCount = 0;
 
-  const visit = (nodeId: string) => {
-    const nodeIndex = nextIndex++;
-    indices.set(nodeId, nodeIndex);
-    lowLinks.set(nodeId, nodeIndex);
-    stack.push(nodeId);
-    onStack.add(nodeId);
-
-    for (const childId of adjacency.get(nodeId) ?? []) {
-      if (!indices.has(childId)) {
-        visit(childId);
-        lowLinks.set(
-          nodeId,
-          Math.min(lowLinks.get(nodeId) ?? nodeIndex, lowLinks.get(childId) ?? 0),
-        );
-      } else if (onStack.has(childId)) {
-        lowLinks.set(
-          nodeId,
-          Math.min(lowLinks.get(nodeId) ?? nodeIndex, indices.get(childId) ?? 0),
-        );
+  for (let index = finishOrder.length - 1; index >= 0; index -= 1) {
+    const startId = finishOrder[index];
+    if (startId === undefined || componentByNode.has(startId)) continue;
+    const stack = [startId];
+    componentByNode.set(startId, componentCount);
+    while (stack.length > 0) {
+      const nodeId = stack.pop();
+      if (nodeId === undefined) continue;
+      for (const parentId of reverseAdjacency.get(nodeId) ?? []) {
+        if (componentByNode.has(parentId)) continue;
+        componentByNode.set(parentId, componentCount);
+        stack.push(parentId);
       }
     }
-
-    if (lowLinks.get(nodeId) !== indices.get(nodeId)) return;
-
-    while (stack.length > 0) {
-      const member = stack.pop();
-      if (member === undefined) break;
-      onStack.delete(member);
-      componentByNode.set(member, componentCount);
-      if (member === nodeId) break;
-    }
     componentCount += 1;
-  };
-
-  for (const nodeId of nodeIds) {
-    if (!indices.has(nodeId)) visit(nodeId);
   }
 
   return componentByNode;
