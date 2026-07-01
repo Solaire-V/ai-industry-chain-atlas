@@ -23,8 +23,11 @@ test("mobile exposes the full-chain poster and opens the CPO bottom sheet", asyn
   await page.goto("/");
 
   await expect(
-    page.getByRole("heading", { name: "AI 算力产业链全景图谱" }),
+    page.getByRole("heading", { name: "AI 算力系统连接图谱" }),
   ).toBeVisible();
+  await expect(page.getByText("制造使能层")).toBeVisible();
+  await expect(page.getByText("半导体前道设备 ⇢ AI 芯片 / 光芯片")).toBeVisible();
+  await expect(page.getByRole("group", { name: "关系模式" })).toHaveCount(0);
   await expect(
     page.getByRole("navigation", { name: "产业层级" }),
   ).toHaveCount(0);

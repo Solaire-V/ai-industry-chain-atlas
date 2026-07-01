@@ -1,111 +1,53 @@
-# Poster Atlas Redesign Implementation Plan
+# System Map Redesign Implementation Plan
 
-> **Status:** Completed on `feat/atlas-foundation` in the poster redesign pass.
+> **Status:** Completed on `feat/atlas-foundation` in the system-map redesign pass.
 
-**Goal:** Replace the layer-sidebar relationship view with a full AI compute industry-chain poster canvas while preserving node/company drawers and shareable state.
+**Goal:** Replace the poster-card wall with a connected AI compute system map while preserving node/company drawers and shareable state.
 
-**Architecture:** `AtlasApp` will derive one full-canvas node list instead of layer-scoped nodes. A new `PosterAtlasCanvas` component renders grouped poster sections, cards, and relation arrows from the existing validated snapshot. Header controls remain code-native; details continue through existing drawers.
+**Architecture:** `AtlasApp` derives one full-canvas node list from the validated snapshot and passes all industry edges into `PosterAtlasCanvas`. `PosterAtlasCanvas` renders material input lanes, the central AI compute chain, manufacturing-enablement lanes, and visible connection explanations. Header search remains; relationship mode controls are removed from the UI while legacy `mode` query parsing remains compatible.
 
 **Tech Stack:** Next.js App Router, React, TypeScript, CSS, Zod fixtures, Vitest, Testing Library, Playwright.
 
 ---
 
-### Task 1: Lock the poster behavior with component tests
+### Task 1: Lock system-map behavior with tests
 
 **Files:**
 - Modify: `tests/atlas-app.test.tsx`
+- Modify: `tests/e2e/atlas.spec.ts`
 
-- [x] **Step 1: Write failing tests**
+- [x] Assert the layer navigation is gone.
+- [x] Assert the relationship mode group is gone.
+- [x] Assert the H1 is `AI 算力系统连接图谱`.
+- [x] Assert the page contains `材料输入层`, `制造使能层`, and `AI 算力主链路`.
+- [x] Assert visible connection explanations include material input and equipment enablement examples.
+- [x] Update mobile E2E to verify the system map and CPO bottom sheet.
 
-Add tests asserting:
-
-```ts
-expect(screen.queryByRole("navigation", { name: "产业层级" })).not.toBeInTheDocument();
-expect(screen.getByRole("heading", { name: "AI 算力产业链全景图谱" })).toBeInTheDocument();
-expect(screen.getByText("上游基础材料")).toBeInTheDocument();
-expect(screen.getByText("高速互联与 CPO")).toBeInTheDocument();
-expect(screen.getByTestId("node-cpo")).toBeInTheDocument();
-```
-
-Update search and focus tests so they expect unmatched nodes to disappear from the full poster, not just the selected layer.
-
-- [x] **Step 2: Run the test**
-
-Run: `npm test -- tests/atlas-app.test.tsx`
-
-Expected: fail because `LayerNav` is still rendered and the poster heading does not exist.
-
-### Task 2: Implement the poster canvas
+### Task 2: Implement system-map canvas
 
 **Files:**
-- Create: `components/atlas/poster-atlas-canvas.tsx`
+- Modify: `components/atlas/poster-atlas-canvas.tsx`
 - Modify: `components/atlas/atlas-app.tsx`
 - Modify: `components/atlas/atlas-header.tsx`
 - Modify: `app/globals.css`
 
-- [x] **Step 1: Create `PosterAtlasCanvas`**
+- [x] Remove relationship mode controls from the header.
+- [x] Pass all validated industry edges to the canvas instead of mode-filtered edges.
+- [x] Render material input lanes.
+- [x] Render the central AI compute chain.
+- [x] Render manufacturing enablement lanes as explanatory, non-clickable cards.
+- [x] Keep real nodes clickable with stable `data-testid="node-${id}"`.
+- [x] Render visible connection explanation cards and accessible relation summaries.
 
-Render grouped sections from the existing `AtlasSnapshot`:
+### Task 3: Verify
 
-- section heading;
-- node cards with `data-testid="node-${id}"`;
-- representative companies from `companyIds`;
-- selected and related states;
-- accessible hidden relation summaries.
-
-- [x] **Step 2: Replace `LayerNav` usage**
-
-Remove `LayerNav` from `AtlasApp` render path. Keep query parsing untouched for compatibility, but derive `posterNodes` from all snapshot nodes and search filters.
-
-- [x] **Step 3: Restyle app**
-
-Change global layout from two-column dark dashboard to warm poster surface. Preserve drawer behavior and mobile bottom sheet.
-
-- [x] **Step 4: Run component tests**
-
-Run: `npm test -- tests/atlas-app.test.tsx`
-
-Expected: pass.
-
-### Task 3: Update browser/E2E coverage
-
-**Files:**
-- Modify: `tests/e2e/atlas.spec.ts`
-
-- [x] **Step 1: Update mobile test**
-
-Remove layer filter assertions. Assert mobile opens CPO from the poster canvas and the drawer is visible.
-
-- [x] **Step 2: Run E2E**
-
-Run: `npm run test:e2e`
-
-Expected: desktop and mobile tests pass.
-
-### Task 4: Verify and commit
-
-**Files:**
-- Modify as above.
-
-- [x] **Step 1: Run final checks**
-
-Run:
-
-```bash
-npm test
-npm run typecheck
-npm run build
-npm run test:e2e
-git diff --check
-```
-
-- [x] **Step 2: Browser QA**
-
-Check desktop and `390×844` mobile. Confirm no left sidebar, poster heading visible, CPO card clickable, company drawer still works, no console errors.
-
-- [ ] **Step 3: Commit**
-
-```bash
-git add .
-git commit -m "feat: redesign atlas as full industry poster"
-```
+- [x] `npm test -- tests/atlas-app.test.tsx`
+- [x] `npm test`
+- [x] `npm run typecheck`
+- [x] `npm run build`
+- [x] `npm run test:e2e`
+- [x] Desktop screenshot
+- [x] Mobile screenshot
+- [x] CPO drawer interaction and console check
+- [ ] `git diff --check`
+- [ ] Commit

@@ -6,7 +6,6 @@ import { AtlasHeader } from "@/components/atlas/atlas-header";
 import { CompanyDrawer } from "@/components/atlas/company-drawer";
 import { NodeDrawer } from "@/components/atlas/node-drawer";
 import { PosterAtlasCanvas } from "@/components/atlas/poster-atlas-canvas";
-import { filterEdgesByMode } from "@/lib/atlas/graph";
 import {
   DEFAULT_ATLAS_QUERY,
   parseAtlasQuery,
@@ -133,17 +132,6 @@ export function AtlasApp({
     return () => window.clearTimeout(timer);
   }, [query.search, searchInput]);
 
-  const modeEdges = filterEdgesByMode(initialSnapshot.industryEdges, query.mode);
-  const posterEdgeById = new Map(modeEdges.map((edge) => [edge.id, edge]));
-  if (selectedNode) {
-    for (const edge of initialSnapshot.industryEdges) {
-      if (edge.from === selectedNode.id || edge.to === selectedNode.id) {
-        posterEdgeById.set(edge.id, edge);
-      }
-    }
-  }
-  const posterEdges = [...posterEdgeById.values()];
-
   const normalizedSearch = searchInput.trim().toLocaleLowerCase();
   const matchingCompanyIds = new Set<string>();
   if (normalizedSearch) {
@@ -193,9 +181,7 @@ export function AtlasApp({
   return (
     <div className="atlas-app">
       <AtlasHeader
-        mode={query.mode}
         search={searchInput}
-        onModeChange={(mode) => updateQuery({ mode })}
         onSearchChange={(nextSearch) => {
           setFocusAnchorNodeId(null);
           setSearchInput(nextSearch);
@@ -210,8 +196,7 @@ export function AtlasApp({
       <PosterAtlasCanvas
         nodes={posterNodes}
         companies={initialSnapshot.companies}
-        edges={posterEdges}
-        mode={query.mode}
+        edges={initialSnapshot.industryEdges}
         selectedNodeId={selectedNode?.id ?? null}
         empty={posterNodes.length === 0}
         onSelectNode={(node) => {

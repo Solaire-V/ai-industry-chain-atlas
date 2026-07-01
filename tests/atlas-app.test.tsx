@@ -31,17 +31,23 @@ const renderAtlas = (
 };
 
 describe("AtlasApp", () => {
-  it("renders a single full-chain poster instead of a layer sidebar", () => {
+  it("renders a connected system map instead of layer filters", () => {
     renderAtlas();
 
     expect(
       screen.queryByRole("navigation", { name: "产业层级" }),
     ).not.toBeInTheDocument();
     expect(
-      screen.getByRole("heading", { name: "AI 算力产业链全景图谱" }),
+      screen.queryByRole("group", { name: "关系模式" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "AI 算力系统连接图谱" }),
     ).toBeInTheDocument();
-    expect(screen.getByText("上游基础材料")).toBeInTheDocument();
-    expect(screen.getByText("高速互联与 CPO")).toBeInTheDocument();
+    expect(screen.getByText("材料输入层")).toBeInTheDocument();
+    expect(screen.getByText("制造使能层")).toBeInTheDocument();
+    expect(screen.getByText("AI 算力主链路")).toBeInTheDocument();
+    expect(screen.getByText("磷化铟衬底 → 光芯片")).toBeInTheDocument();
+    expect(screen.getByText("半导体前道设备 ⇢ AI 芯片 / 光芯片")).toBeInTheDocument();
     expect(screen.getByTestId("node-cpo")).toBeInTheDocument();
     expect(screen.getByTestId("node-ai-cluster")).toBeInTheDocument();
   });
@@ -68,7 +74,7 @@ describe("AtlasApp", () => {
     );
   });
 
-  it("augments the default supply view with the selected CPO one-hop path", () => {
+  it("shows selected CPO relationships without a relationship mode toggle", () => {
     renderAtlas();
 
     fireEvent.click(screen.getByTestId("node-cpo"));
@@ -80,32 +86,29 @@ describe("AtlasApp", () => {
     expect(
       screen.getByText("光引擎 → 共封装光学（集成）"),
     ).toBeInTheDocument();
-    expect(screen.getByTestId("node-pluggable-optics")).toHaveAttribute(
-      "data-related",
-      "false",
-    );
+    expect(
+      screen.getByText("共封装光学 → AI 以太网交换机"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("可插拔光模块 → AI 以太网交换机"),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "直接关系" })).not.toBeInTheDocument();
 
     fireEvent.keyDown(document, { key: "Escape" });
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
-  it("keeps legacy layer links compatible while relationship mode remains shareable", () => {
-    const { push } = renderAtlas(
+  it("keeps legacy layer and mode links compatible without showing mode controls", () => {
+    renderAtlas(
       new URLSearchParams("layer=interconnect&mode=all"),
     );
 
     expect(
       screen.queryByRole("navigation", { name: "产业层级" }),
     ).not.toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "AI 算力产业链全景图谱" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "AI 算力系统连接图谱" })).toBeInTheDocument();
     expect(screen.getByTestId("node-hbm")).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole("button", { name: "直接关系" }));
-    expect(screen.getByRole("button", { name: "直接关系" })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
-    expect(push).toHaveBeenLastCalledWith("?layer=interconnect&mode=supply");
+    expect(screen.queryByRole("group", { name: "关系模式" })).not.toBeInTheDocument();
   });
 
   it("preserves spaces while typing and replaces the canonical search URL after debounce", () => {
@@ -427,12 +430,11 @@ describe("AtlasApp", () => {
   it("restores query state from popstate without remounting", () => {
     render(<AtlasApp initialSnapshot={verticalSlice} />);
     fireEvent.click(screen.getByTestId("node-cpo"));
-    fireEvent.click(screen.getByRole("button", { name: "全部关系" }));
 
     window.history.pushState(null, "", "?layer=interconnect&mode=supply&node=cpo");
     fireEvent.popState(window);
 
-    expect(screen.getByRole("heading", { name: "AI 算力产业链全景图谱" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "AI 算力系统连接图谱" })).toBeInTheDocument();
     expect(screen.getByRole("dialog", { name: "共封装光学" })).toBeInTheDocument();
   });
 
@@ -473,7 +475,7 @@ describe("AtlasApp", () => {
     expect(push).toHaveBeenCalledTimes(1);
 
     push.mockClear();
-    fireEvent.click(screen.getByRole("button", { name: "全部关系" }));
+    fireEvent.click(screen.getByTestId("node-ai-server"));
     expect(push).toHaveBeenCalledTimes(1);
   });
 });
