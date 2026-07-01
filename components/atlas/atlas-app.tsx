@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { AtlasHeader } from "@/components/atlas/atlas-header";
 import { CompanyDrawer } from "@/components/atlas/company-drawer";
 import { NodeDrawer } from "@/components/atlas/node-drawer";
-import { PosterAtlasCanvas } from "@/components/atlas/poster-atlas-canvas";
+import { ThreeLayerAtlasCanvas } from "@/components/atlas/three-layer-atlas-canvas";
 import {
   DEFAULT_ATLAS_QUERY,
   parseAtlasQuery,
@@ -13,6 +13,11 @@ import {
   type AtlasQueryState,
 } from "@/lib/atlas/query-state";
 import type { AtlasSnapshot } from "@/lib/atlas/schema";
+import {
+  atlasStageById,
+  getStageIdForNode,
+  getStageRealNodeIds,
+} from "@/lib/atlas/stage-map";
 
 export interface AtlasHistoryAdapter {
   push: (url: string) => void;
@@ -70,6 +75,12 @@ export function AtlasApp({
   const selectedCompany = query.company
     ? companyById.get(query.company)
     : undefined;
+  const selectedStageId = selectedNode
+    ? getStageIdForNode(selectedNode.id) ?? query.stage
+    : query.stage;
+  const selectedStageRealNodeIds = atlasStageById.get(selectedStageId)
+    ? getStageRealNodeIds(atlasStageById.get(selectedStageId)!)
+    : new Set<string>();
 
   const updateQuery = (
     patch: Partial<AtlasQueryState>,
@@ -148,6 +159,12 @@ export function AtlasApp({
   const posterNodes = initialSnapshot.nodes.filter((node) => {
     if (selectedNode?.id === node.id || focusAnchorNodeId === node.id) return true;
     if (!normalizedSearch) return true;
+    if (
+      query.stage !== DEFAULT_ATLAS_QUERY.stage &&
+      selectedStageRealNodeIds.has(node.id)
+    ) {
+      return true;
+    }
     const matchesNode = [node.name, node.englishName ?? "", node.summary]
       .join(" ")
       .toLocaleLowerCase()
@@ -193,17 +210,23 @@ export function AtlasApp({
           )
         }
       />
-      <PosterAtlasCanvas
+      <ThreeLayerAtlasCanvas
         nodes={posterNodes}
         companies={initialSnapshot.companies}
         edges={initialSnapshot.industryEdges}
+        selectedStageId={selectedStageId}
         selectedNodeId={selectedNode?.id ?? null}
+        search={normalizedSearch}
         empty={posterNodes.length === 0}
-        showSearchResults={Boolean(normalizedSearch)}
+        onSelectStage={(stage) => {
+          setFocusAnchorNodeId(null);
+          updateQuery({ stage, node: null, company: null }, "replace");
+        }}
         onSelectNode={(node) => {
           setFocusAnchorNodeId(null);
           nodeTriggerRef.current = document.activeElement as HTMLElement;
-          updateQuery({ node, company: null });
+          const nextStage = getStageIdForNode(node) ?? queryRef.current.stage;
+          updateQuery({ stage: nextStage, node, company: null });
         }}
         onResetSearch={() => {
           setFocusAnchorNodeId(null);
@@ -225,7 +248,13 @@ export function AtlasApp({
           onSelectNode={(node) => {
             setFocusAnchorNodeId(null);
             pendingRestoreNodeIdRef.current = node.id;
-            updateQuery({ layer: node.layer, node: node.id, company: null })
+            const nextStage = getStageIdForNode(node.id) ?? queryRef.current.stage;
+            updateQuery({
+              layer: node.layer,
+              stage: nextStage,
+              node: node.id,
+              company: null,
+            });
           }}
         />
       ) : selectedNode ? (

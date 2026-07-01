@@ -507,8 +507,8 @@ export const atlasStages: readonly AtlasStage[] = [
         },
         {
           id: "test-equipment-core",
-          label: "测试设备",
-          detail: "探针台、测试机、老化设备和高速测试。",
+          label: "探针台 / 测试机",
+          detail: "测试设备覆盖探针台、测试机、老化设备和高速测试。",
           kind: "equipment",
         },
         {
@@ -1227,7 +1227,7 @@ export const atlasStages: readonly AtlasStage[] = [
       { id: "devices-to-engine", label: "光芯片 + 激光器 + 调制器 + TIA + DSP → 光引擎", kind: "flow" },
       { id: "engine-to-cpo", label: "光引擎 → CPO", kind: "flow" },
       { id: "engine-to-pluggable", label: "光引擎 → 可插拔光模块", kind: "flow" },
-      { id: "optical-products-to-network", label: "CPO / 可插拔光模块 / OCS → 交换机 / AI 集群", kind: "flow" },
+      { id: "optical-products-to-network", label: "CPO / 光模块 → 交换机 / AI 集群", kind: "flow" },
     ],
   },
   {
