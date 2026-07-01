@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { AtlasHeader } from "@/components/atlas/atlas-header";
+import { CompanyDrawer } from "@/components/atlas/company-drawer";
 import { LayerNav, LAYERS } from "@/components/atlas/layer-nav";
 import { NodeDrawer } from "@/components/atlas/node-drawer";
 import { RelationshipCanvas } from "@/components/atlas/relationship-canvas";
@@ -71,20 +72,23 @@ export function AtlasApp({
     setQuery(next);
   };
 
-  const closeDrawer = () => {
+  const closeNodeDrawer = () => {
     updateQuery({ node: null, company: null });
     nodeTriggerRef.current?.focus();
   };
 
+  const closeCompanyDrawer = () => updateQuery({ company: null });
+
   useEffect(() => {
-    if (!query.node) return;
+    if (!query.node && !query.company) return;
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
-      closeDrawer();
+      if (queryRef.current.company) closeCompanyDrawer();
+      else closeNodeDrawer();
     };
     document.addEventListener("keydown", closeOnEscape);
     return () => document.removeEventListener("keydown", closeOnEscape);
-  }, [historyAdapter, query.node]);
+  }, [historyAdapter, query.company, query.node]);
 
   useEffect(() => {
     const restoreQuery = () => {
@@ -111,11 +115,18 @@ export function AtlasApp({
     return () => window.clearTimeout(timer);
   }, [query.search, searchInput]);
 
-  const companyById = new Map(
-    initialSnapshot.companies.map((company) => [company.id, company]),
+  const companyById = useMemo(
+    () => new Map(initialSnapshot.companies.map((company) => [company.id, company])),
+    [initialSnapshot.companies],
   );
-  const nodeById = new Map(initialSnapshot.nodes.map((node) => [node.id, node]));
+  const nodeById = useMemo(
+    () => new Map(initialSnapshot.nodes.map((node) => [node.id, node])),
+    [initialSnapshot.nodes],
+  );
   const selectedNode = query.node ? nodeById.get(query.node) : undefined;
+  const selectedCompany = query.company
+    ? companyById.get(query.company)
+    : undefined;
   const layer = LAYERS.find(({ id }) => id === query.layer) ?? LAYERS[3];
   const modeEdges = filterEdgesByMode(initialSnapshot.industryEdges, query.mode);
   const canvasEdgeById = new Map(modeEdges.map((edge) => [edge.id, edge]));
@@ -220,17 +231,29 @@ export function AtlasApp({
           updateQuery({ search: "", node: null, company: null }, "replace");
         }}
       />
-      {selectedNode ? (
+      {selectedCompany ? (
+        <CompanyDrawer
+          company={selectedCompany}
+          returnNode={selectedNode ?? null}
+          companies={initialSnapshot.companies}
+          nodes={initialSnapshot.nodes}
+          roles={initialSnapshot.companyNodeRoles}
+          marketSnapshots={initialSnapshot.marketSnapshots}
+          supplyRelations={initialSnapshot.supplyRelations}
+          sources={initialSnapshot.sources}
+          onBack={closeCompanyDrawer}
+          onSelectNode={(node) =>
+            updateQuery({ layer: node.layer, node: node.id, company: null })
+          }
+        />
+      ) : selectedNode ? (
         <NodeDrawer
           node={selectedNode}
           companies={initialSnapshot.companies}
           roles={roles}
           sources={sources}
-          selectedCompanyId={
-            query.company && companyById.has(query.company) ? query.company : null
-          }
           onSelectCompany={(company) => updateQuery({ company })}
-          onClose={closeDrawer}
+          onClose={closeNodeDrawer}
         />
       ) : null}
     </div>

@@ -523,10 +523,6 @@ button {
   font-size: 11px;
 }
 
-.selected-company-placeholder {
-  color: #6d4a2c;
-}
-
 .source-list {
   margin: 0;
   padding: 0;
@@ -546,6 +542,89 @@ button {
   line-height: 1.45;
   text-decoration-color: #8b9294;
   text-underline-offset: 3px;
+}
+
+.drawer-back {
+  margin: 16px 22px 0;
+  padding: 6px 0;
+  color: var(--ink);
+  font-size: 13px;
+  border: 0;
+  border-bottom: 1px solid #8b9294;
+  background: transparent;
+}
+
+.drawer-back:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.company-drawer-content {
+  padding-top: 8px;
+}
+
+.market-data,
+.supply-meta {
+  margin: 0;
+}
+
+.market-data div,
+.supply-meta div {
+  display: grid;
+  grid-template-columns: 105px minmax(0, 1fr);
+  gap: 10px;
+  padding: 6px 0;
+  font-size: 12px;
+  border-bottom: 1px solid #d4d2ca;
+}
+
+.market-data dt,
+.supply-meta dt {
+  color: #64717a;
+  font-weight: 700;
+}
+
+.market-data dd,
+.supply-meta dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.supply-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.supply-heading label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #64717a;
+  font-size: 11px;
+}
+
+.supply-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.supply-list > li {
+  padding: 12px 0;
+  border-bottom: 1px solid #aeb1ad;
+}
+
+.supply-list p {
+  margin: 4px 0 8px;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.supply-list .supply-direction {
+  font-size: 13px;
+  font-weight: 800;
 }
 
 @media (min-width: 1260px) {

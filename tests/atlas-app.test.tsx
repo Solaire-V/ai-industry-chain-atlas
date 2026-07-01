@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { AtlasApp, type AtlasHistoryAdapter } from "@/components/atlas/atlas-app";
 import { verticalSlice } from "@/content/seed/vertical-slice";
+import type { AtlasSnapshot } from "@/lib/atlas/schema";
 
 afterEach(() => {
   cleanup();
@@ -13,13 +14,14 @@ afterEach(() => {
 
 const renderAtlas = (
   query = new URLSearchParams("layer=interconnect&mode=supply"),
+  snapshot: AtlasSnapshot = verticalSlice,
 ) => {
   const replace = vi.fn();
   const push = vi.fn();
   const historyAdapter: AtlasHistoryAdapter = { push, replace };
   render(
     <AtlasApp
-      initialSnapshot={verticalSlice}
+      initialSnapshot={snapshot}
       initialQuery={query}
       historyAdapter={historyAdapter}
     />,
@@ -125,18 +127,87 @@ describe("AtlasApp", () => {
     expect(replace).toHaveBeenLastCalledWith("?layer=interconnect&mode=supply");
   });
 
-  it("keeps representative company selection code-native and shareable", () => {
+  it("opens Broadcom research from CPO and returns without losing the node", () => {
     const { push } = renderAtlas();
     fireEvent.click(screen.getByTestId("node-cpo"));
 
     fireEvent.click(screen.getByRole("button", { name: /博通 AVGO/ }));
 
-    expect(
-      screen.getByText("已选择公司，行情与供需详情将在公司面板加载：博通（AVGO）"),
-    ).toBeInTheDocument();
+    const companyDialog = screen.getByRole("dialog", { name: "博通" });
+    expect(within(companyDialog).getByText("USD · NASDAQ · US")).toBeInTheDocument();
+    expect(within(companyDialog).getAllByText("N/A").length).toBeGreaterThan(0);
+    expect(within(companyDialog).getByText("暂无行情数据")).toBeInTheDocument();
     expect(push).toHaveBeenLastCalledWith(
       "?layer=interconnect&mode=supply&node=cpo&company=broadcom",
     );
+
+    fireEvent.click(within(companyDialog).getByRole("button", { name: "返回共封装光学" }));
+    expect(screen.getByRole("dialog", { name: "共封装光学" })).toBeInTheDocument();
+    expect(push).toHaveBeenLastCalledWith(
+      "?layer=interconnect&mode=supply&node=cpo",
+    );
+  });
+
+  it("shows confirmed supply evidence only for the relevant companies", () => {
+    renderAtlas(new URLSearchParams("layer=chips&mode=supply&node=hbm&company=sk-hynix"));
+    const dialog = screen.getByRole("dialog", { name: "SK 海力士" });
+    expect(within(dialog).getByText("供应给 英伟达")).toBeInTheDocument();
+    expect(within(dialog).getByText("公司确认")).toBeInTheDocument();
+    const evidence = within(dialog).getByRole("link", {
+      name: /NVIDIA and SK hynix Announce Multiyear Technology Partnership/,
+    });
+    expect(evidence).toHaveAttribute("href", expect.stringMatching(/^https:\/\//));
+    expect(evidence).toHaveAttribute("rel", "noreferrer");
+
+    cleanup();
+    renderAtlas(new URLSearchParams("layer=interconnect&mode=supply&node=cpo&company=broadcom"));
+    expect(screen.getByText("暂无公开确认的供需关系")).toBeInTheDocument();
+    expect(screen.queryByText("供应给 英伟达")).not.toBeInTheDocument();
+  });
+
+  it("hides speculation until requested", () => {
+    const speculative: AtlasSnapshot = {
+      ...verticalSlice,
+      supplyRelations: [
+        ...verticalSlice.supplyRelations,
+        {
+          id: "broadcom--nvidia--speculation",
+          supplierId: "broadcom",
+          customerId: "nvidia",
+          nodeId: "cpo",
+          product: "未经确认的 CPO 平台合作",
+          status: "market_speculation",
+          evidenceSourceIds: ["broadcom-bailly-2024"],
+        },
+      ],
+    };
+    renderAtlas(
+      new URLSearchParams("layer=interconnect&mode=supply&node=cpo&company=broadcom"),
+      speculative,
+    );
+
+    expect(screen.queryByText("未经确认的 CPO 平台合作")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("checkbox", { name: "显示市场推测" }));
+    expect(screen.getByText("未经确认的 CPO 平台合作")).toBeInTheDocument();
+    expect(screen.getByText("市场推测")).toBeInTheDocument();
+  });
+
+  it("uses company role links coherently and Escape backs out one drawer at a time", () => {
+    const { push } = renderAtlas(
+      new URLSearchParams("layer=interconnect&mode=supply&node=cpo&company=broadcom"),
+    );
+    const companyDialog = screen.getByRole("dialog", { name: "博通" });
+    fireEvent.click(within(companyDialog).getByRole("button", { name: /交换芯片.*Tomahawk/ }));
+    expect(screen.getByRole("dialog", { name: "交换 ASIC" })).toBeInTheDocument();
+    expect(push).toHaveBeenLastCalledWith(
+      "?layer=chips&mode=supply&node=switch-asic",
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /博通 AVGO/ }));
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(screen.getByRole("dialog", { name: "交换 ASIC" })).toBeInTheDocument();
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
   it("restores query state from popstate without remounting", () => {

@@ -13,7 +13,6 @@ interface NodeDrawerProps {
   companies: readonly AtlasCompany[];
   roles: readonly CompanyNodeRole[];
   sources: readonly AtlasSource[];
-  selectedCompanyId: string | null;
   onSelectCompany: (companyId: string) => void;
   onClose: () => void;
 }
@@ -23,16 +22,12 @@ export function NodeDrawer({
   companies,
   roles,
   sources,
-  selectedCompanyId,
   onSelectCompany,
   onClose,
 }: NodeDrawerProps) {
   const [imageUnavailable, setImageUnavailable] = useState(false);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const companyById = new Map(companies.map((company) => [company.id, company]));
-  const selectedCompany = selectedCompanyId
-    ? companyById.get(selectedCompanyId)
-    : undefined;
   const titleId = `node-drawer-title-${node.id}`;
 
   useEffect(() => {
@@ -104,7 +99,6 @@ export function NodeDrawer({
                 <button
                   key={role.id}
                   type="button"
-                  aria-pressed={selectedCompanyId === company.id}
                   onClick={() => onSelectCompany(company.id)}
                 >
                   <span><strong>{company.name}</strong> {company.ticker}</span>
@@ -113,11 +107,6 @@ export function NodeDrawer({
               );
             })}
           </div>
-          {selectedCompany ? (
-            <p className="selected-company-placeholder">
-              已选择公司，行情与供需详情将在公司面板加载：{selectedCompany.name}（{selectedCompany.ticker}）
-            </p>
-          ) : null}
         </section>
 
         <section>
