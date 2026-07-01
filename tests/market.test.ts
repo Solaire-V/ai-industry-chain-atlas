@@ -2,12 +2,12 @@ import { describe, expect, it } from "vitest";
 
 import {
   presentMarketSnapshot,
-  type MarketPresentationSnapshot,
 } from "@/lib/atlas/market";
+import type { AtlasMarketSnapshot } from "@/lib/atlas/schema";
 
 const snapshot = (
-  overrides: Partial<MarketPresentationSnapshot> = {},
-): MarketPresentationSnapshot => ({
+  overrides: Partial<AtlasMarketSnapshot> = {},
+): AtlasMarketSnapshot => ({
   companyId: "example-company",
   price: 123.456,
   changePct: 1.25,
@@ -26,7 +26,7 @@ describe("presentMarketSnapshot", () => {
     expect(presentMarketSnapshot(snapshot({ ttmEps: 0 })).pe).toBe("N/A");
     expect(presentMarketSnapshot(snapshot({ ttmEps: -1 })).pe).toBe("N/A");
     expect(
-      presentMarketSnapshot(snapshot({ ttmPe: -5 }) as MarketPresentationSnapshot)
+      presentMarketSnapshot(snapshot({ ttmPe: -5 }) as AtlasMarketSnapshot)
         .pe,
     ).toBe("N/A");
   });
@@ -96,5 +96,16 @@ describe("presentMarketSnapshot", () => {
       presentMarketSnapshot(snapshot({ changePct: -2.5 })).change,
     ).toBe("-2.5%");
     expect(presentMarketSnapshot(snapshot()).pe).toBe("29.39");
+  });
+
+  it("formats zero and tiny nonzero changes without inventing a signed zero", () => {
+    expect(presentMarketSnapshot(snapshot({ changePct: 0 })).change).toBe("0%");
+    expect(presentMarketSnapshot(snapshot({ changePct: -0 })).change).toBe("0%");
+    expect(presentMarketSnapshot(snapshot({ changePct: 0.004 })).change).toBe(
+      "+<0.01%",
+    );
+    expect(presentMarketSnapshot(snapshot({ changePct: -0.004 })).change).toBe(
+      "-<0.01%",
+    );
   });
 });

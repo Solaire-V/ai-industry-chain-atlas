@@ -143,6 +143,7 @@ export function RelationshipCanvas({
               return (
                 <button
                   key={node.id}
+                  id={`atlas-node-${node.id}`}
                   className="graph-node"
                   type="button"
                   style={{ left: position.x + 40, top: position.y + 100 }}

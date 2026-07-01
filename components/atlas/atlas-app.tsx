@@ -59,6 +59,7 @@ export function AtlasApp({
   const [layersExpanded, setLayersExpanded] = useState(false);
   const queryRef = useRef(query);
   const nodeTriggerRef = useRef<HTMLElement | null>(null);
+  const pendingRestoreNodeIdRef = useRef<string | null>(null);
   const companyById = useMemo(
     () => new Map(initialSnapshot.companies.map((company) => [company.id, company])),
     [initialSnapshot.companies],
@@ -89,7 +90,12 @@ export function AtlasApp({
     nodeTriggerRef.current?.focus();
   };
 
-  const closeCompanyDrawer = () => updateQuery({ company: null });
+  const closeCompanyDrawer = () =>
+    updateQuery(
+      selectedNode
+        ? { company: null }
+        : { node: null, company: null },
+    );
 
   useEffect(() => {
     if (!query.node && !query.company) return;
@@ -178,6 +184,16 @@ export function AtlasApp({
     );
     return matchesNode || matchesCompany;
   });
+
+  useEffect(() => {
+    const pendingNodeId = pendingRestoreNodeIdRef.current;
+    if (!pendingNodeId || query.company || query.node !== pendingNodeId) return;
+    const target = document.getElementById(`atlas-node-${pendingNodeId}`);
+    if (!target) return;
+    nodeTriggerRef.current = target;
+    pendingRestoreNodeIdRef.current = null;
+  }, [query.company, query.layer, query.node]);
+
   const selectLayer = (selectedLayer: AtlasNode["layer"]) => {
     setLayersExpanded(false);
     updateQuery({ layer: selectedLayer, node: null, company: null });
@@ -242,9 +258,10 @@ export function AtlasApp({
           supplyRelations={initialSnapshot.supplyRelations}
           sources={initialSnapshot.sources}
           onBack={closeCompanyDrawer}
-          onSelectNode={(node) =>
+          onSelectNode={(node) => {
+            pendingRestoreNodeIdRef.current = node.id;
             updateQuery({ layer: node.layer, node: node.id, company: null })
-          }
+          }}
         />
       ) : selectedNode ? (
         <NodeDrawer

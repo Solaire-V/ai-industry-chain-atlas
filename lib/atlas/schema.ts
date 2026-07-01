@@ -114,17 +114,52 @@ export const companyNodeRoleSchema = z.object({
   sourceIds: z.array(requiredStringSchema).min(1),
 });
 
-export const marketSnapshotSchema = z.object({
-  companyId: requiredStringSchema,
-  price: z.number().nonnegative(),
-  changePct: z.number(),
-  currency: currencySchema,
-  tradedAt: z.string().datetime(),
-  fetchedAt: z.string().datetime(),
-  delayMinutes: z.number().int().nonnegative(),
-  ttmEps: z.number().nullable(),
-  ttmPe: z.number().positive().nullable(),
-});
+export const marketFreshnessSourceSchema = z.enum([
+  "live",
+  "delayed",
+  "close",
+  "cached",
+]);
+
+export const marketSnapshotSchema = z
+  .object({
+    companyId: requiredStringSchema,
+    price: z.number().nonnegative(),
+    changePct: z.number(),
+    currency: currencySchema,
+    tradedAt: z.string().datetime(),
+    fetchedAt: z.string().datetime(),
+    delayMinutes: z.number().int().nonnegative(),
+    ttmEps: z.number().nullable(),
+    ttmPe: z.number().positive().nullable(),
+    freshnessSource: marketFreshnessSourceSchema.optional(),
+    cachedAt: z.string().datetime().optional(),
+    error: requiredStringSchema.optional(),
+  })
+  .superRefine((snapshot, context) => {
+    const issue = (path: "delayMinutes" | "cachedAt", message: string) =>
+      context.addIssue({ code: z.ZodIssueCode.custom, path: [path], message });
+
+    if (snapshot.freshnessSource === "live") {
+      if (snapshot.delayMinutes !== 0) {
+        issue("delayMinutes", "live market data must have zero delay");
+      }
+      if (snapshot.cachedAt) {
+        issue("cachedAt", "live market data cannot have a cache timestamp");
+      }
+    }
+    if (snapshot.freshnessSource === "delayed") {
+      if (snapshot.delayMinutes <= 0) {
+        issue("delayMinutes", "delayed market data must have a positive delay");
+      }
+      if (snapshot.cachedAt) {
+        issue("cachedAt", "delayed market data cannot have a cache timestamp");
+      }
+    }
+    if (snapshot.freshnessSource === "cached" && !snapshot.cachedAt) {
+      issue("cachedAt", "cached market data requires a cache timestamp");
+    }
+  });
 
 export const atlasSnapshotSchema = z
   .object({

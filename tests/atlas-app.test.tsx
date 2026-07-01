@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { AtlasApp, type AtlasHistoryAdapter } from "@/components/atlas/atlas-app";
 import { verticalSlice } from "@/content/seed/vertical-slice";
 import type { AtlasSnapshot } from "@/lib/atlas/schema";
+import { atlasSnapshotSchema } from "@/lib/atlas/schema";
 
 afterEach(() => {
   cleanup();
@@ -262,6 +263,126 @@ describe("AtlasApp", () => {
     const dialog = screen.getByRole("dialog", { name: "博通" });
     expect(within(dialog).getByText("USD 200")).toBeInTheDocument();
     expect(within(dialog).getByText("+2%")).toBeInTheDocument();
+  });
+
+  it("retains cached and close freshness metadata through canonical parsing", () => {
+    const baseMarket = {
+      companyId: "broadcom",
+      price: 200,
+      changePct: 2,
+      currency: "USD",
+      fetchedAt: "2026-07-01T03:01:00.000Z",
+      delayMinutes: 15,
+      ttmEps: 4,
+      ttmPe: 50,
+    } as const;
+    const cached = atlasSnapshotSchema.parse({
+      ...verticalSlice,
+      marketSnapshots: [{
+        ...baseMarket,
+        tradedAt: "2026-07-01T03:00:00.000Z",
+        freshnessSource: "cached",
+        cachedAt: "2026-07-01T03:02:00.000Z",
+      }],
+    });
+    renderAtlas(
+      new URLSearchParams("layer=interconnect&mode=supply&node=cpo&company=broadcom"),
+      cached,
+    );
+    expect(screen.getByText(/^缓存至 /)).toBeInTheDocument();
+
+    cleanup();
+    const close = atlasSnapshotSchema.parse({
+      ...verticalSlice,
+      marketSnapshots: [{
+        ...baseMarket,
+        tradedAt: "2026-07-01T03:00:00.000Z",
+        freshnessSource: "close",
+      }],
+    });
+    renderAtlas(
+      new URLSearchParams("layer=interconnect&mode=supply&node=cpo&company=broadcom"),
+      close,
+    );
+    expect(screen.getByText("最近收盘")).toBeInTheDocument();
+  });
+
+  it("groups evidence by strength and sorts announcements newest first", () => {
+    const relation = (
+      id: string,
+      product: string,
+      status: AtlasSnapshot["supplyRelations"][number]["status"],
+      announcedAt?: string,
+    ): AtlasSnapshot["supplyRelations"][number] => ({
+      id,
+      supplierId: "broadcom",
+      customerId: "nvidia",
+      nodeId: "cpo",
+      product,
+      status,
+      evidenceSourceIds: ["broadcom-bailly-2024"],
+      announcedAt,
+    });
+    const evidenceHistory: AtlasSnapshot = {
+      ...verticalSlice,
+      supplyRelations: [
+        relation("confirmed-old", "确认关系旧", "company_confirmed", "2025-01-01"),
+        relation("report", "多来源关系", "multi_source_report", "2026-05-01"),
+        relation("confirmed-undated", "确认关系未注明日期", "company_confirmed"),
+        relation("regulatory", "监管披露关系", "regulatory_disclosure", "2026-06-01"),
+        relation("confirmed-new", "确认关系新", "company_confirmed", "2026-01-01"),
+        relation("speculation", "市场推测关系", "market_speculation", "2026-07-01"),
+      ],
+    };
+    renderAtlas(
+      new URLSearchParams("layer=interconnect&mode=supply&node=cpo&company=broadcom"),
+      evidenceHistory,
+    );
+    const dialog = screen.getByRole("dialog", { name: "博通" });
+    const headings = within(dialog).getAllByRole("heading", { level: 4 });
+    expect(headings.map((heading) => heading.textContent)).toEqual([
+      "公司确认",
+      "监管披露",
+      "多来源报道",
+    ]);
+    const content = dialog.textContent ?? "";
+    expect(content.indexOf("确认关系新")).toBeLessThan(content.indexOf("确认关系旧"));
+    expect(content.indexOf("确认关系旧")).toBeLessThan(content.indexOf("确认关系未注明日期"));
+    expect(content).not.toContain("市场推测关系");
+
+    fireEvent.click(within(dialog).getByRole("checkbox", { name: "显示市场推测" }));
+    expect(within(dialog).getByRole("heading", { level: 4, name: "市场推测" })).toBeInTheDocument();
+    expect(within(dialog).getByText("市场推测关系")).toBeInTheDocument();
+  });
+
+  it("clears a valid company together with an invalid return node", () => {
+    const { push } = renderAtlas(
+      new URLSearchParams(
+        "layer=interconnect&mode=supply&node=missing-node&company=broadcom",
+      ),
+    );
+    const dialog = screen.getByRole("dialog", { name: "博通" });
+    fireEvent.click(within(dialog).getByRole("button", { name: "返回产业图" }));
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(push).toHaveBeenLastCalledWith("?layer=interconnect&mode=supply");
+  });
+
+  it("restores focus to the connected graph node after company role navigation", async () => {
+    renderAtlas(
+      new URLSearchParams("layer=interconnect&mode=supply&node=cpo&company=broadcom"),
+    );
+    const companyDialog = screen.getByRole("dialog", { name: "博通" });
+    fireEvent.click(
+      within(companyDialog).getByRole("button", { name: /交换芯片.*Tomahawk/ }),
+    );
+    const close = screen.getByRole("button", { name: "关闭详情" });
+    await waitFor(() => expect(close).toHaveFocus());
+    fireEvent.click(close);
+
+    const connectedNode = screen.getByTestId("node-switch-asic");
+    await waitFor(() => expect(connectedNode).toHaveFocus());
+    expect(connectedNode.isConnected).toBe(true);
   });
 
   it("restores query state from popstate without remounting", () => {

@@ -611,6 +611,12 @@ button {
   list-style: none;
 }
 
+.supply-group h4 {
+  margin: 14px 0 2px;
+  color: #64717a;
+  font-size: 12px;
+}
+
 .supply-list > li {
   padding: 12px 0;
   border-bottom: 1px solid #aeb1ad;

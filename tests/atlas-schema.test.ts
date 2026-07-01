@@ -5,6 +5,7 @@ import {
   companyNodeRoleSchema,
   companySchema,
   marketSchema,
+  marketSnapshotSchema,
   nodeSchema,
   sourceSchema,
   supplyRelationSchema,
@@ -140,6 +141,47 @@ describe("atlas domain contracts", () => {
     expect(marketSchema.parse(market)).toBe("US");
     expect(companySchema.shape.market).toBe(marketSchema);
   });
+
+  it("preserves canonical market freshness metadata", () => {
+    const parsed = marketSnapshotSchema.parse({
+      ...validSnapshot.marketSnapshots[0],
+      freshnessSource: "cached",
+      cachedAt: "2026-07-01T07:00:00.000Z",
+      error: "upstream timeout",
+    });
+
+    expect(parsed).toMatchObject({
+      freshnessSource: "cached",
+      cachedAt: "2026-07-01T07:00:00.000Z",
+      error: "upstream timeout",
+    });
+  });
+
+  it.each([
+    ["live", 15, undefined, "delayMinutes"],
+    ["live", 0, "2026-07-01T07:00:00.000Z", "cachedAt"],
+    ["delayed", 0, undefined, "delayMinutes"],
+    ["delayed", 15, "2026-07-01T07:00:00.000Z", "cachedAt"],
+    ["cached", 15, undefined, "cachedAt"],
+  ] as const)(
+    "rejects inconsistent %s market freshness metadata",
+    (freshnessSource, delayMinutes, cachedAt, issueField) => {
+      const result = marketSnapshotSchema.safeParse({
+        ...validSnapshot.marketSnapshots[0],
+        freshnessSource,
+        delayMinutes,
+        ...(cachedAt ? { cachedAt } : {}),
+      });
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.issues).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({ path: [issueField] }),
+          ]),
+        );
+      }
+    },
+  );
 
   it("rejects a material node with fewer than two distinct leaders", () => {
     const result = nodeSchema.safeParse({

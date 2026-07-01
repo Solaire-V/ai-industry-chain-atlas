@@ -39,6 +39,20 @@ const STATUS_LABEL: Record<AtlasSupplyRelation["status"], string> = {
   market_speculation: "市场推测",
 };
 
+const STATUS_SEQUENCE = [
+  "company_confirmed",
+  "counterparty_confirmed",
+  "regulatory_disclosure",
+  "multi_source_report",
+  "market_speculation",
+] as const satisfies readonly AtlasSupplyRelation["status"][];
+
+const announcedEpoch = (value: string | undefined) => {
+  if (!value) return Number.NEGATIVE_INFINITY;
+  const epoch = Date.parse(value);
+  return Number.isNaN(epoch) ? Number.NEGATIVE_INFINITY : epoch;
+};
+
 export function CompanyDrawer({
   company,
   returnNode,
@@ -78,7 +92,10 @@ export function CompanyDrawer({
         ({ supplierId, customerId }) =>
           supplierId === company.id || customerId === company.id,
       )
-      .toSorted((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status]),
+      .toSorted((a, b) =>
+        STATUS_ORDER[a.status] - STATUS_ORDER[b.status] ||
+        announcedEpoch(b.announcedAt) - announcedEpoch(a.announcedAt),
+      ),
     [company.id, supplyRelations],
   );
   const verifiedRelations = relations.filter(
@@ -87,6 +104,10 @@ export function CompanyDrawer({
   const visibleRelations = showSpeculation
     ? relations
     : verifiedRelations;
+  const visibleGroups = STATUS_SEQUENCE.flatMap((status) => {
+    const items = visibleRelations.filter((relation) => relation.status === status);
+    return items.length > 0 ? [{ status, relations: items }] : [];
+  });
   const latestSnapshot = useMemo(() => {
     let latest: AtlasMarketSnapshot | null = null;
     let latestEpoch = Number.NEGATIVE_INFINITY;
@@ -177,42 +198,48 @@ export function CompanyDrawer({
           {verifiedRelations.length === 0 ? (
             <p>暂无公开确认的供需关系</p>
           ) : null}
-          <ul className="supply-list">
-            {visibleRelations.map((relation) => {
-              const isSupplier = relation.supplierId === company.id;
-              const counterpart = companyById.get(
-                isSupplier ? relation.customerId : relation.supplierId,
-              );
-              const relationNode = nodeById.get(relation.nodeId);
-              return (
-                <li key={relation.id}>
-                  <p className="supply-direction">
-                    {isSupplier ? "供应给" : "采购自"} {counterpart?.name ?? "未知公司"}
-                  </p>
-                  <p>{relation.product}</p>
-                  <dl className="supply-meta">
-                    <div><dt>节点</dt><dd>{relationNode?.name ?? relation.nodeId}</dd></div>
-                    <div><dt>证据状态</dt><dd>{STATUS_LABEL[relation.status]}</dd></div>
-                    <div><dt>公告日期</dt><dd>{relation.announcedAt ?? "未披露"}</dd></div>
-                  </dl>
-                  <ul className="source-list">
-                    {relation.evidenceSourceIds.map((sourceId) => {
-                      const source = sourceById.get(sourceId);
-                      if (!source) return null;
-                      return (
-                        <li key={source.id}>
-                          <a href={source.url} target="_blank" rel="noreferrer">
-                            {source.title}
-                          </a>
-                          <small>{source.publisher}</small>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </li>
-              );
-            })}
-          </ul>
+          <div className="supply-groups">
+            {visibleGroups.map((group) => (
+              <div className="supply-group" key={group.status}>
+                <h4>{STATUS_LABEL[group.status]}</h4>
+                <ul className="supply-list">
+                  {group.relations.map((relation) => {
+                    const isSupplier = relation.supplierId === company.id;
+                    const counterpart = companyById.get(
+                      isSupplier ? relation.customerId : relation.supplierId,
+                    );
+                    const relationNode = nodeById.get(relation.nodeId);
+                    return (
+                      <li key={relation.id}>
+                        <p className="supply-direction">
+                          {isSupplier ? "供应给" : "采购自"} {counterpart?.name ?? "未知公司"}
+                        </p>
+                        <p>{relation.product}</p>
+                        <dl className="supply-meta">
+                          <div><dt>节点</dt><dd>{relationNode?.name ?? relation.nodeId}</dd></div>
+                          <div><dt>公告日期</dt><dd>{relation.announcedAt ?? "未披露"}</dd></div>
+                        </dl>
+                        <ul className="source-list">
+                          {relation.evidenceSourceIds.map((sourceId) => {
+                            const source = sourceById.get(sourceId);
+                            if (!source) return null;
+                            return (
+                              <li key={source.id}>
+                                <a href={source.url} target="_blank" rel="noreferrer">
+                                  {source.title}
+                                </a>
+                                <small>{source.publisher}</small>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            ))}
+          </div>
         </section>
       </div>
     </aside>
