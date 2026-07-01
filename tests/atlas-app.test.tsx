@@ -1,4 +1,5 @@
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { StrictMode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { AtlasApp, type AtlasHistoryAdapter } from "@/components/atlas/atlas-app";
@@ -59,7 +60,7 @@ describe("AtlasApp", () => {
       "true",
     );
     expect(
-      screen.getByText("光引擎 → 共封装光学（integrate）"),
+      screen.getByText("光引擎 → 共封装光学（集成）"),
     ).toBeInTheDocument();
     expect(screen.getByTestId("node-pluggable-optics")).toHaveAttribute(
       "data-related",
@@ -169,5 +170,25 @@ describe("AtlasApp", () => {
 
     expect(screen.getByText("技术示意图暂不可用")).toBeInTheDocument();
     expect(screen.getByText("AI 生成技术示意图")).toBeInTheDocument();
+  });
+
+  it("writes each discrete history action exactly once in StrictMode", () => {
+    const push = vi.fn();
+    const replace = vi.fn();
+    render(
+      <StrictMode>
+        <AtlasApp
+          initialSnapshot={verticalSlice}
+          historyAdapter={{ push, replace }}
+        />
+      </StrictMode>,
+    );
+
+    fireEvent.click(screen.getByTestId("node-cpo"));
+    expect(push).toHaveBeenCalledTimes(1);
+
+    push.mockClear();
+    fireEvent.click(screen.getByRole("button", { name: "03 核心芯片" }));
+    expect(push).toHaveBeenCalledTimes(1);
   });
 });

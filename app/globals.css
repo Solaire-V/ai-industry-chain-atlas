@@ -659,6 +659,10 @@ button {
     padding-top: 40px;
   }
 
+  .relationship-scroll {
+    min-height: calc(100vh - 104px);
+  }
+
   .relationship-workspace h1 {
     top: 20px;
     left: 20px;

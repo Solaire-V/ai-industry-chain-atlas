@@ -17,5 +17,8 @@ describe("atlas mobile layout CSS", () => {
     expect(narrow).toMatch(/\.atlas-header\s*\{[^}]*grid-template-rows:/);
     expect(narrow).toMatch(/\.relationship-controls\s*\{[^}]*grid-row:\s*2/);
     expect(narrow).toMatch(/\.relationship-workspace\s*\{[^}]*padding-top:/);
+    expect(narrow).toMatch(
+      /\.relationship-scroll\s*\{[^}]*min-height:\s*calc\(100vh - 104px\)/,
+    );
   });
 });

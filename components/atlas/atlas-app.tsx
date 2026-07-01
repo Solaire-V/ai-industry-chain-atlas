@@ -56,23 +56,19 @@ export function AtlasApp({
     normalizeInitialQuery(initialQuery).search,
   );
   const [layersExpanded, setLayersExpanded] = useState(false);
+  const queryRef = useRef(query);
   const nodeTriggerRef = useRef<HTMLElement | null>(null);
-
-  const writeQuery = (
-    current: AtlasQueryState,
-    patch: Partial<AtlasQueryState>,
-    method: "push" | "replace" = "push",
-  ) => {
-    const next = parseAtlasQuery(serializeAtlasQuery({ ...current, ...patch }));
-    historyAdapter[method](`?${serializeAtlasQuery(next).toString()}`);
-    return next;
-  };
 
   const updateQuery = (
     patch: Partial<AtlasQueryState>,
     method: "push" | "replace" = "push",
   ) => {
-    setQuery((current) => writeQuery(current, patch, method));
+    const next = parseAtlasQuery(
+      serializeAtlasQuery({ ...queryRef.current, ...patch }),
+    );
+    historyAdapter[method](`?${serializeAtlasQuery(next).toString()}`);
+    queryRef.current = next;
+    setQuery(next);
   };
 
   const closeDrawer = () => {
@@ -93,6 +89,7 @@ export function AtlasApp({
   useEffect(() => {
     const restoreQuery = () => {
       const restored = parseAtlasQuery(new URLSearchParams(window.location.search));
+      queryRef.current = restored;
       setQuery(restored);
       setSearchInput(restored.search);
     };

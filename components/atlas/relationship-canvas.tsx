@@ -21,6 +21,14 @@ const nodeDisplayNames: Readonly<Record<string, string>> = {
   "ai-cluster": "AI集群",
 };
 
+const relationshipTypeLabels: Readonly<
+  Record<AtlasIndustryEdge["type"], string>
+> = {
+  supply: "供给",
+  integrate: "集成",
+  deploy: "部署",
+};
+
 interface RelationshipCanvasProps {
   title: string;
   nodes: readonly AtlasNode[];
@@ -76,7 +84,7 @@ export function RelationshipCanvas({
               <ul>
                 {visibleEdges.map((edge) => (
                   <li key={`summary-${edge.id}`}>
-                    {nodeById.get(edge.from)?.name ?? edge.from} → {nodeById.get(edge.to)?.name ?? edge.to}（{edge.type}）
+                    {nodeById.get(edge.from)?.name ?? edge.from} → {nodeById.get(edge.to)?.name ?? edge.to}（{relationshipTypeLabels[edge.type]}）
                   </li>
                 ))}
               </ul>
