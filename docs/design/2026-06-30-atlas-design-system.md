@@ -51,6 +51,7 @@
 ## Image treatment
 
 - The CPO technical cutaway is the only raster media in the vertical slice.
+- Production asset: `public/images/cpo-technical-cutaway.png` (1672 × 941).
 - It sits at the top of the light drawer in an implementation-stable landscape frame with no color overlay.
 - It must be labelled `AI 生成技术示意图` in code outside the image.
 - The lower drawer remains live HTML so companies, quotes, PE and supply evidence can update independently.
@@ -69,4 +70,3 @@
 - Selecting a node highlights its first-degree upstream/downstream path and opens the drawer.
 - Selecting a company replaces node detail with company detail without losing the node in the URL.
 - Use 140–180 ms opacity/color transitions. Do not animate SVG geometry; respect `prefers-reduced-motion`.
-
