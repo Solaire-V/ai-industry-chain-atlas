@@ -5,6 +5,7 @@ playwright-report/
 test-results/
 .DS_Store
 .worktrees/
+.superpowers/
 *.tsbuildinfo
 .env*
 !.env.example
