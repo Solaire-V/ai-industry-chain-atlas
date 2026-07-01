@@ -199,6 +199,7 @@ export function AtlasApp({
         edges={initialSnapshot.industryEdges}
         selectedNodeId={selectedNode?.id ?? null}
         empty={posterNodes.length === 0}
+        showSearchResults={Boolean(normalizedSearch)}
         onSelectNode={(node) => {
           setFocusAnchorNodeId(null);
           nodeTriggerRef.current = document.activeElement as HTMLElement;

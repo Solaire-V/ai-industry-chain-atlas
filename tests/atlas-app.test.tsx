@@ -31,7 +31,7 @@ const renderAtlas = (
 };
 
 describe("AtlasApp", () => {
-  it("renders a connected system map instead of layer filters", () => {
+  it("renders a modular atlas overview instead of dense filters", () => {
     renderAtlas();
 
     expect(
@@ -41,20 +41,61 @@ describe("AtlasApp", () => {
       screen.queryByRole("group", { name: "关系模式" }),
     ).not.toBeInTheDocument();
     expect(
-      screen.getByRole("heading", { name: "AI 算力系统连接图谱" }),
+      screen.getByRole("heading", { name: "AI 算力模块化地图" }),
     ).toBeInTheDocument();
-    expect(screen.getByText("材料输入层")).toBeInTheDocument();
-    expect(screen.getByText("制造使能层")).toBeInTheDocument();
-    expect(screen.getByText("AI 算力主链路")).toBeInTheDocument();
-    expect(screen.getByText("磷化铟衬底 → 光芯片")).toBeInTheDocument();
-    expect(screen.getByText("半导体前道设备 ⇢ AI 芯片 / 光芯片")).toBeInTheDocument();
-    expect(screen.getByTestId("node-cpo")).toBeInTheDocument();
-    expect(screen.getByTestId("node-ai-cluster")).toBeInTheDocument();
+    expect(screen.getByText("模块总览")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /半导体材料/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /半导体设备/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /光通信 \/ CPO/ })).toBeInTheDocument();
+    expect(screen.getByText("半导体材料 → AI 芯片 / 存储")).toBeInTheDocument();
+    expect(screen.getByText("半导体设备 ⇢ 光通信 / CPO")).toBeInTheDocument();
+    expect(
+      screen.getByText("光通信 / CPO → 服务器 / 网络 / AIDC / 应用"),
+    ).toBeInTheDocument();
+  });
+
+  it("expands semiconductor materials into smallest subnodes", () => {
+    renderAtlas();
+
+    fireEvent.click(screen.getByRole("button", { name: /半导体材料/ }));
+
+    expect(screen.getByRole("heading", { name: "半导体材料" })).toBeInTheDocument();
+    expect(screen.getByText("晶圆 / 衬底")).toBeInTheDocument();
+    expect(screen.getByText("硅片")).toBeInTheDocument();
+    expect(screen.getAllByText("SOI").length).toBeGreaterThan(0);
+    expect(screen.getByText("InP 衬底")).toBeInTheDocument();
+    expect(screen.getByText("GaAs 衬底")).toBeInTheDocument();
+    expect(screen.getByText("光刻 / 图形化材料")).toBeInTheDocument();
+    expect(screen.getByText("光刻胶")).toBeInTheDocument();
+    expect(screen.getByText("电子特气")).toBeInTheDocument();
+    expect(screen.getByText("CMP 抛光液")).toBeInTheDocument();
+    expect(screen.getByText("ABF 载板材料")).toBeInTheDocument();
+    expect(screen.getByText("低损耗 CCL")).toBeInTheDocument();
+    expect(screen.getAllByText("光纤预制棒").length).toBeGreaterThan(0);
+    expect(screen.getByText("InP 衬底 → 激光器 / EML")).toBeInTheDocument();
+    expect(screen.getByText("SOI → 硅光芯片")).toBeInTheDocument();
+  });
+
+  it("expands semiconductor equipment as manufacturing enablement", () => {
+    renderAtlas();
+
+    fireEvent.click(screen.getByRole("button", { name: /半导体设备/ }));
+
+    expect(screen.getByRole("heading", { name: "半导体设备" })).toBeInTheDocument();
+    expect(screen.getByText("前道设备")).toBeInTheDocument();
+    expect(screen.getByText("光刻")).toBeInTheDocument();
+    expect(screen.getByText("刻蚀")).toBeInTheDocument();
+    expect(screen.getByText("薄膜沉积")).toBeInTheDocument();
+    expect(screen.getByText("封装 / 测试设备")).toBeInTheDocument();
+    expect(screen.getByText("探针台 / 测试机")).toBeInTheDocument();
+    expect(screen.getByText("光耦合")).toBeInTheDocument();
+    expect(screen.getByText("前道设备 ⇢ AI 芯片 / 光芯片")).toBeInTheDocument();
   });
 
   it("opens the CPO dialog with the sole raster illustration and code-native detail", () => {
     renderAtlas();
 
+    fireEvent.click(screen.getByRole("button", { name: /光通信 \/ CPO/ }));
     fireEvent.click(screen.getByTestId("node-cpo"));
 
     const dialog = screen.getByRole("dialog", { name: "共封装光学" });
@@ -77,6 +118,7 @@ describe("AtlasApp", () => {
   it("shows selected CPO relationships without a relationship mode toggle", () => {
     renderAtlas();
 
+    fireEvent.click(screen.getByRole("button", { name: /光通信 \/ CPO/ }));
     fireEvent.click(screen.getByTestId("node-cpo"));
 
     expect(screen.getByTestId("node-optical-engine")).toHaveAttribute(
@@ -86,12 +128,8 @@ describe("AtlasApp", () => {
     expect(
       screen.getByText("光引擎 → 共封装光学（集成）"),
     ).toBeInTheDocument();
-    expect(
-      screen.getByText("共封装光学 → AI 以太网交换机"),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText("可插拔光模块 → AI 以太网交换机"),
-    ).toBeInTheDocument();
+    expect(screen.getByText("光引擎 → CPO")).toBeInTheDocument();
+    expect(screen.getByText("CPO / 光模块 → 交换机 / AI 集群")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "直接关系" })).not.toBeInTheDocument();
 
     fireEvent.keyDown(document, { key: "Escape" });
@@ -106,8 +144,8 @@ describe("AtlasApp", () => {
     expect(
       screen.queryByRole("navigation", { name: "产业层级" }),
     ).not.toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "AI 算力系统连接图谱" })).toBeInTheDocument();
-    expect(screen.getByTestId("node-hbm")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "AI 算力模块化地图" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /AI 芯片 \/ 存储/ })).toBeInTheDocument();
     expect(screen.queryByRole("group", { name: "关系模式" })).not.toBeInTheDocument();
   });
 
@@ -149,6 +187,7 @@ describe("AtlasApp", () => {
 
   it("opens Broadcom research from CPO and returns without losing the node", () => {
     const { push } = renderAtlas();
+    fireEvent.click(screen.getByRole("button", { name: /光通信 \/ CPO/ }));
     fireEvent.click(screen.getByTestId("node-cpo"));
 
     fireEvent.click(screen.getByRole("button", { name: /博通 AVGO/ }));
@@ -429,17 +468,19 @@ describe("AtlasApp", () => {
 
   it("restores query state from popstate without remounting", () => {
     render(<AtlasApp initialSnapshot={verticalSlice} />);
+    fireEvent.click(screen.getByRole("button", { name: /光通信 \/ CPO/ }));
     fireEvent.click(screen.getByTestId("node-cpo"));
 
     window.history.pushState(null, "", "?layer=interconnect&mode=supply&node=cpo");
     fireEvent.popState(window);
 
-    expect(screen.getByRole("heading", { name: "AI 算力系统连接图谱" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "AI 算力模块化地图" })).toBeInTheDocument();
     expect(screen.getByRole("dialog", { name: "共封装光学" })).toBeInTheDocument();
   });
 
   it("moves focus into the drawer and restores it to the triggering node", async () => {
     renderAtlas();
+    fireEvent.click(screen.getByRole("button", { name: /光通信 \/ CPO/ }));
     const trigger = screen.getByTestId("node-cpo");
     trigger.focus();
     fireEvent.click(trigger);
@@ -452,6 +493,7 @@ describe("AtlasApp", () => {
 
   it("shows a code-native fallback when the CPO image cannot load", () => {
     renderAtlas();
+    fireEvent.click(screen.getByRole("button", { name: /光通信 \/ CPO/ }));
     fireEvent.click(screen.getByTestId("node-cpo"));
     fireEvent.error(screen.getByRole("img", { name: "CPO 技术剖面示意图" }));
 
@@ -471,10 +513,13 @@ describe("AtlasApp", () => {
       </StrictMode>,
     );
 
+    fireEvent.click(screen.getByRole("button", { name: /光通信 \/ CPO/ }));
     fireEvent.click(screen.getByTestId("node-cpo"));
     expect(push).toHaveBeenCalledTimes(1);
 
+    fireEvent.keyDown(document, { key: "Escape" });
     push.mockClear();
+    fireEvent.click(screen.getByRole("button", { name: /服务器 \/ 网络 \/ AIDC \/ 应用/ }));
     fireEvent.click(screen.getByTestId("node-ai-server"));
     expect(push).toHaveBeenCalledTimes(1);
   });

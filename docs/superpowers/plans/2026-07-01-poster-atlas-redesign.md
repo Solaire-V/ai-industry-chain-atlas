@@ -1,53 +1,128 @@
-# System Map Redesign Implementation Plan
+# Modular Atlas Redesign Implementation Plan
 
-> **Status:** Completed on `feat/atlas-foundation` in the system-map redesign pass.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:executing-plans` to implement this plan task-by-task. Subagent execution is intentionally not used because the current user asked us to continue in this session and the developer instruction says not to spawn subagents unless explicitly requested.
 
-**Goal:** Replace the poster-card wall with a connected AI compute system map while preserving node/company drawers and shareable state.
+**Goal:** Replace the single dense system map with a modular AI compute-chain atlas that shows module-to-module relationships first and lets users expand each module into internal nodes.
 
-**Architecture:** `AtlasApp` derives one full-canvas node list from the validated snapshot and passes all industry edges into `PosterAtlasCanvas`. `PosterAtlasCanvas` renders material input lanes, the central AI compute chain, manufacturing-enablement lanes, and visible connection explanations. Header search remains; relationship mode controls are removed from the UI while legacy `mode` query parsing remains compatible.
+**Architecture:** Add a UI-only module map model under `lib/atlas` for module cards, subnode groups, and structured connection text. `PosterAtlasCanvas` consumes that model plus validated snapshot nodes, renders a low-density module overview, and expands one selected module into an internal graph. Existing node/company drawers remain unchanged and are only opened for real `AtlasSnapshot` nodes.
 
 **Tech Stack:** Next.js App Router, React, TypeScript, CSS, Zod fixtures, Vitest, Testing Library, Playwright.
 
 ---
 
-### Task 1: Lock system-map behavior with tests
+### Task 1: Lock modular atlas behavior with tests
 
 **Files:**
 - Modify: `tests/atlas-app.test.tsx`
 - Modify: `tests/e2e/atlas.spec.ts`
 
-- [x] Assert the layer navigation is gone.
-- [x] Assert the relationship mode group is gone.
-- [x] Assert the H1 is `AI 算力系统连接图谱`.
-- [x] Assert the page contains `材料输入层`, `制造使能层`, and `AI 算力主链路`.
-- [x] Assert visible connection explanations include material input and equipment enablement examples.
-- [x] Update mobile E2E to verify the system map and CPO bottom sheet.
+- [ ] **Step 1: Write failing unit tests**
 
-### Task 2: Implement system-map canvas
+Add assertions that:
+
+- the page heading is `AI 算力模块化地图`;
+- the page exposes `模块总览`;
+- the page has module buttons for `半导体材料`, `半导体设备`, `光通信 / CPO`;
+- `关系模式` and `产业层级` controls remain absent;
+- clicking `半导体材料` reveals `硅片`, `SOI`, `InP 衬底`, `光刻胶`, `电子特气`, `CMP 抛光液`, `ABF 载板材料`, `低损耗 CCL`, `光纤预制棒`;
+- clicking `半导体设备` reveals `前道设备`, `光刻`, `刻蚀`, `薄膜沉积`, `封装 / 测试设备`;
+- structured connection text includes `半导体材料 → AI 芯片 / 存储`, `半导体设备 ⇢ 光通信 / CPO`, and `光通信 / CPO → 服务器 / 网络 / AIDC / 应用`;
+- clicking real node `node-cpo` still opens the existing node drawer.
+
+- [ ] **Step 2: Run focused tests and confirm RED**
+
+Run: `npm test -- tests/atlas-app.test.tsx`
+
+Expected: FAIL because the new module heading, module buttons, expanded material subnodes, and structured module connection labels do not exist yet.
+
+- [ ] **Step 3: Update E2E expectations**
+
+Modify mobile E2E to assert:
+
+- heading `AI 算力模块化地图`;
+- module button `半导体材料`;
+- tap `半导体材料`;
+- material subnode `光刻胶` becomes visible;
+- tap `光通信 / CPO`;
+- real node `node-cpo` is still clickable and opens the drawer.
+
+### Task 2: Add module-map model
+
+**Files:**
+- Create: `lib/atlas/module-map.ts`
+
+- [ ] **Step 1: Define module IDs, subnodes, groups, and edges**
+
+Create a UI-only model with:
+
+- `atlasModules`: seven modules;
+- `moduleConnections`: module-to-module edges with `flow` or `enable` kind;
+- material groups split down to smallest nodes;
+- equipment groups split into front-end, packaging/test, PCB manufacturing, optical/CPO equipment;
+- real node references for existing snapshot nodes such as `cpo`, `optical-engine`, `pluggable-optics`, `hbm`, `high-layer-pcb`;
+- virtual subnodes for fine-grained items not yet backed by company/source evidence.
+
+- [ ] **Step 2: Export helper maps**
+
+Export `defaultModuleId`, `atlasModuleById`, and type aliases so the canvas can render without recomputing static data on each render.
+
+### Task 3: Implement modular canvas
 
 **Files:**
 - Modify: `components/atlas/poster-atlas-canvas.tsx`
-- Modify: `components/atlas/atlas-app.tsx`
-- Modify: `components/atlas/atlas-header.tsx`
 - Modify: `app/globals.css`
 
-- [x] Remove relationship mode controls from the header.
-- [x] Pass all validated industry edges to the canvas instead of mode-filtered edges.
-- [x] Render material input lanes.
-- [x] Render the central AI compute chain.
-- [x] Render manufacturing enablement lanes as explanatory, non-clickable cards.
-- [x] Keep real nodes clickable with stable `data-testid="node-${id}"`.
-- [x] Render visible connection explanation cards and accessible relation summaries.
+- [ ] **Step 1: Replace dense layers with module overview**
 
-### Task 3: Verify
+Render:
 
-- [x] `npm test -- tests/atlas-app.test.tsx`
-- [x] `npm test`
-- [x] `npm run typecheck`
-- [x] `npm run build`
-- [x] `npm run test:e2e`
-- [x] Desktop screenshot
-- [x] Mobile screenshot
-- [x] CPO drawer interaction and console check
+- heading `AI 算力模块化地图`;
+- short explanation that the first layer is overview and expanded modules show internal nodes;
+- module buttons with input/output summaries;
+- visible module connection cards generated from `moduleConnections`.
+
+- [ ] **Step 2: Add expanded module panel**
+
+Use local React state for selected module. Default to `materials`. Clicking a module updates selected state and scroll position remains in page.
+
+The expanded module panel renders:
+
+- module role;
+- grouped internal subnodes;
+- virtual subnode chips for smallest items;
+- real clickable node cards for existing snapshot nodes;
+- internal connection list generated from selected module data.
+
+- [ ] **Step 3: Preserve existing real-node behavior**
+
+Existing `NodeButton` keeps:
+
+- `id="atlas-node-${node.id}"`;
+- `data-testid="node-${node.id}"`;
+- `aria-pressed`;
+- `data-related`;
+- click handler opening the drawer.
+
+### Task 4: Responsive styling
+
+**Files:**
+- Modify: `app/globals.css`
+
+- [ ] Style the overview as a low-density module map.
+- [ ] Style module buttons with clear selected state.
+- [ ] Style module connections as structured flow and dashed enablement rows.
+- [ ] Style expanded module groups as readable chips/cards.
+- [ ] On mobile, stack module buttons vertically and keep expanded internal map readable without tiny text.
+
+### Task 5: Verify
+
+- [ ] `npm test -- tests/atlas-app.test.tsx`
+- [ ] `npm test`
+- [ ] `npm run typecheck`
+- [ ] `npm run build`
+- [ ] `npm run test:e2e`
+- [ ] Browser/Playwright desktop screenshot
+- [ ] Browser/Playwright mobile screenshot
+- [ ] Browser/Playwright CPO drawer interaction and console check
 - [ ] `git diff --check`
 - [ ] Commit

@@ -18,15 +18,18 @@ test("explores CPO and opens a company research drawer", async ({ page }) => {
   await expect(page).toHaveURL(/company=broadcom/);
 });
 
-test("mobile exposes the full-chain poster and opens the CPO bottom sheet", async ({ page }) => {
+test("mobile expands modules and opens the CPO bottom sheet", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
 
   await expect(
-    page.getByRole("heading", { name: "AI 算力系统连接图谱" }),
+    page.getByRole("heading", { name: "AI 算力模块化地图" }),
   ).toBeVisible();
-  await expect(page.getByText("制造使能层")).toBeVisible();
-  await expect(page.getByText("半导体前道设备 ⇢ AI 芯片 / 光芯片")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "模块总览" })).toBeVisible();
+  await page.getByRole("button", { name: /半导体材料/ }).click();
+  await expect(page.getByText("光刻胶")).toBeVisible();
+  await page.getByRole("button", { name: /光通信 \/ CPO/ }).click();
+  await expect(page.getByText("光引擎 → CPO")).toBeVisible();
   await expect(page.getByRole("group", { name: "关系模式" })).toHaveCount(0);
   await expect(
     page.getByRole("navigation", { name: "产业层级" }),

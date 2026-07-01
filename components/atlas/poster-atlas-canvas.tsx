@@ -1,4 +1,17 @@
+import { useEffect, useState } from "react";
+
 import { getNeighborhood } from "@/lib/atlas/graph";
+import {
+  atlasModules,
+  atlasModuleById,
+  defaultModuleId,
+  moduleConnections,
+  type AtlasModule,
+  type AtlasModuleId,
+  type ModuleConnectionKind,
+  type ModuleGroup,
+  type ModuleSubnode,
+} from "@/lib/atlas/module-map";
 import type {
   AtlasCompany,
   AtlasIndustryEdge,
@@ -61,127 +74,32 @@ const relationshipTypeLabels: Readonly<
   deploy: "部署",
 };
 
-const materialLanes: ReadonlyArray<{
-  title: string;
-  summary: string;
-  nodeIds: readonly string[];
-  target: string;
-}> = [
-  {
-    title: "晶圆 / 衬底材料",
-    summary: "InP、SOI 等材料进入光芯片、激光器和硅光平台。",
-    nodeIds: ["inp-material", "silicon-photonics-material"],
-    target: "光芯片 / 激光器",
-  },
-  {
-    title: "PCB / 高频材料",
-    summary: "低损耗 CCL、铜箔和树脂决定高速板卡插损与可靠性。",
-    nodeIds: ["low-loss-ccl"],
-    target: "高速 PCB / 服务器板卡",
-  },
-  {
-    title: "光通信材料",
-    summary: "光纤预制棒、光纤与连接材料支撑数据中心光链路。",
-    nodeIds: ["optical-fiber-preform"],
-    target: "光纤阵列 / 光模块",
-  },
-  {
-    title: "封装材料",
-    summary: "ABF 载板、底填胶、焊球、TIM 等是先进封装的物料输入。",
-    nodeIds: [],
-    target: "CoWoS / 2.5D / 3D 封装",
-  },
-];
+const moduleConnectionKindLabels: Readonly<Record<ModuleConnectionKind, string>> = {
+  flow: "产品 / 物料流",
+  enable: "制造使能",
+};
 
-const mainChain: ReadonlyArray<{
-  title: string;
-  summary: string;
-  nodeIds: readonly string[];
-  virtualItems?: readonly string[];
-}> = [
-  {
-    title: "AI 芯片 / HBM",
-    summary: "计算芯片提供算力，HBM 提供高带宽内存。",
-    nodeIds: ["hbm"],
-    virtualItems: ["GPU / AI 加速器"],
-  },
-  {
-    title: "先进封装",
-    summary: "把计算芯片、HBM 与高速互联在封装层缩短距离。",
-    nodeIds: [],
-    virtualItems: ["CoWoS / 2.5D / 3D"],
-  },
-  {
-    title: "板级高速连接",
-    summary: "PCB、连接器和 SerDes 组织服务器与交换机内部电连接。",
-    nodeIds: ["high-layer-pcb"],
-    virtualItems: ["高速连接器"],
-  },
-  {
-    title: "交换 ASIC",
-    summary: "负责 AI 集群横向扩展网络里的包转发与拥塞调度。",
-    nodeIds: ["switch-asic"],
-  },
-  {
-    title: "光电器件",
-    summary: "光芯片、激光器、调制器、TIA 和 DSP 完成光电转换。",
-    nodeIds: ["optical-chip", "laser", "modulator", "tia-driver", "optical-dsp"],
-  },
-  {
-    title: "光引擎 / CPO / 光模块",
-    summary: "CPO 缩短交换芯片到光引擎的电走线，可插拔模块负责面板侧标准化接入。",
-    nodeIds: ["optical-engine", "cpo", "pluggable-optics", "fa-mpo"],
-  },
-  {
-    title: "服务器 / 交换机",
-    summary: "AI 服务器承载加速器，交换机把节点组织成训练与推理网络。",
-    nodeIds: ["ai-server", "ethernet-switch"],
-  },
-  {
-    title: "集群 / 应用",
-    summary: "大规模服务器、网络、电力和冷却共同形成可用算力。",
-    nodeIds: ["ai-cluster"],
-    virtualItems: ["云厂商 / AIDC", "模型训练 / 推理", "AI 应用"],
-  },
-];
+const getModuleIdForNode = (nodeId: string): AtlasModuleId | null => {
+  for (const module of atlasModules) {
+    if (module.representativeNodeIds.includes(nodeId)) return module.id;
+    for (const group of module.groups) {
+      if (group.nodes.some((subnode) => subnode.realNodeId === nodeId)) {
+        return module.id;
+      }
+    }
+  }
+  return null;
+};
 
-const equipmentLanes: ReadonlyArray<{
-  title: string;
-  summary: string;
-  target: string;
-}> = [
-  {
-    title: "半导体前道设备",
-    summary: "光刻、刻蚀、薄膜沉积、离子注入、CMP、清洗、量测。",
-    target: "AI 芯片 / 光芯片",
-  },
-  {
-    title: "先进封装设备",
-    summary: "键合、切割、贴片、检测与 CoWoS / 2.5D / 3D 相关设备。",
-    target: "先进封装 / HBM",
-  },
-  {
-    title: "PCB 制造设备",
-    summary: "钻孔、电镀、压合、曝光、AOI 与高速板可靠性检测。",
-    target: "高速 PCB",
-  },
-  {
-    title: "光模块 / CPO 设备",
-    summary: "光耦合、精密贴装、封装、老化和高速测试设备。",
-    target: "光引擎 / CPO / 光模块",
-  },
-];
-
-const keyConnectionLabels = [
-  "磷化铟衬底 → 光芯片",
-  "硅光子衬底材料 → 光芯片",
-  "低损耗覆铜板 → 高多层高速 PCB",
-  "光纤预制棒 → 光纤阵列与 MPO",
-  "光引擎 → 共封装光学",
-  "共封装光学 → AI 以太网交换机",
-  "可插拔光模块 → AI 以太网交换机",
-  "AI 服务器 + AI 以太网交换机 → AI 计算集群",
-] as const;
+const getModuleRealNodeIds = (module: AtlasModule): ReadonlySet<string> => {
+  const nodeIds = new Set(module.representativeNodeIds);
+  for (const group of module.groups) {
+    for (const subnode of group.nodes) {
+      if (subnode.realNodeId) nodeIds.add(subnode.realNodeId);
+    }
+  }
+  return nodeIds;
+};
 
 interface PosterAtlasCanvasProps {
   nodes: readonly AtlasNode[];
@@ -189,6 +107,7 @@ interface PosterAtlasCanvasProps {
   edges: readonly AtlasIndustryEdge[];
   selectedNodeId: string | null;
   empty: boolean;
+  showSearchResults?: boolean;
   onSelectNode: (nodeId: string) => void;
   onResetSearch: () => void;
 }
@@ -277,15 +196,263 @@ function NodeList({
   );
 }
 
+interface ModuleOverviewProps {
+  selectedModuleId: AtlasModuleId;
+  onSelectModule: (moduleId: AtlasModuleId) => void;
+}
+
+function ModuleOverview({
+  selectedModuleId,
+  onSelectModule,
+}: ModuleOverviewProps) {
+  return (
+    <section className="module-overview" aria-label="模块总览">
+      <header className="module-section-heading">
+        <span>01</span>
+        <div>
+          <h2>模块总览</h2>
+          <p>第一层只看大模块和模块之间的输入/输出；点开模块再看内部节点。</p>
+        </div>
+      </header>
+      <div className="module-card-grid">
+        {atlasModules.map((module) => (
+          <article className="module-card" data-tone={module.tone} key={module.id}>
+            <button
+              className="module-card-button"
+              type="button"
+              aria-pressed={module.id === selectedModuleId}
+              data-selected={module.id === selectedModuleId}
+              onClick={() => onSelectModule(module.id)}
+            >
+              <span>{String(module.order).padStart(2, "0")}</span>
+              <strong>{module.name}</strong>
+              <small>{module.role}</small>
+            </button>
+            <dl className="module-io">
+              <div>
+                <dt>输入</dt>
+                <dd>{module.input}</dd>
+              </div>
+              <div>
+                <dt>输出</dt>
+                <dd>{module.output}</dd>
+              </div>
+            </dl>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function ModuleConnections() {
+  return (
+    <section className="module-connections" aria-label="模块连接">
+      <header className="module-section-heading">
+        <span>02</span>
+        <div>
+          <h2>模块连接</h2>
+          <p>连接文字由结构化边生成：实线表示物料/产品流，虚线表示制造使能。</p>
+        </div>
+      </header>
+      <div className="module-connection-grid">
+        {moduleConnections.map((connection) => (
+          <article
+            className="module-connection-card"
+            data-kind={connection.kind}
+            key={connection.id}
+          >
+            <strong>{connection.label}</strong>
+            <span>{moduleConnectionKindLabels[connection.kind]}</span>
+            <p>{connection.summary}</p>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+interface VirtualSubnodeProps {
+  subnode: ModuleSubnode;
+}
+
+function VirtualSubnode({ subnode }: VirtualSubnodeProps) {
+  return (
+    <span className="module-subnode" title={subnode.description}>
+      <strong>{subnode.label}</strong>
+      <small>{subnode.realNodeId ? "已有真实节点" : "待接公司数据"}</small>
+    </span>
+  );
+}
+
+interface ModuleGroupCardProps {
+  group: ModuleGroup;
+  nodes: ReadonlyMap<string, AtlasNode>;
+  companies: ReadonlyMap<string, AtlasCompany>;
+  selectedNodeId: string | null;
+  related: ReadonlySet<string> | null;
+  onSelectNode: (nodeId: string) => void;
+}
+
+function ModuleGroupCard({
+  group,
+  nodes,
+  companies,
+  selectedNodeId,
+  related,
+  onSelectNode,
+}: ModuleGroupCardProps) {
+  const realNodeIds = group.nodes.flatMap(({ realNodeId }) =>
+    realNodeId && nodes.has(realNodeId) ? [realNodeId] : [],
+  );
+
+  return (
+    <section className="module-group-card">
+      <header>
+        <h3>{group.title}</h3>
+        <p>{group.summary}</p>
+      </header>
+      <div className="module-subnode-grid">
+        {group.nodes.map((subnode) => (
+          <VirtualSubnode key={subnode.id} subnode={subnode} />
+        ))}
+      </div>
+      <NodeList
+        nodeIds={realNodeIds}
+        nodes={nodes}
+        companies={companies}
+        selectedNodeId={selectedNodeId}
+        related={related}
+        onSelectNode={onSelectNode}
+      />
+    </section>
+  );
+}
+
+interface ExpandedModuleProps {
+  module: AtlasModule;
+  nodes: ReadonlyMap<string, AtlasNode>;
+  companies: ReadonlyMap<string, AtlasCompany>;
+  selectedNodeId: string | null;
+  related: ReadonlySet<string> | null;
+  onSelectNode: (nodeId: string) => void;
+}
+
+function ExpandedModule({
+  module,
+  nodes,
+  companies,
+  selectedNodeId,
+  related,
+  onSelectNode,
+}: ExpandedModuleProps) {
+  return (
+    <section className="expanded-module" data-tone={module.tone} aria-label={`${module.name}内部节点`}>
+      <header className="expanded-module-header">
+        <div>
+          <span>03 · 已展开模块</span>
+          <h2>{module.name}</h2>
+          <p>{module.summary}</p>
+        </div>
+        <dl>
+          <div>
+            <dt>输入</dt>
+            <dd>{module.input}</dd>
+          </div>
+          <div>
+            <dt>输出</dt>
+            <dd>{module.output}</dd>
+          </div>
+        </dl>
+      </header>
+
+      <div className="expanded-module-body">
+        <div className="module-group-grid">
+          {module.groups.map((group) => (
+            <ModuleGroupCard
+              key={group.id}
+              group={group}
+              nodes={nodes}
+              companies={companies}
+              selectedNodeId={selectedNodeId}
+              related={related}
+              onSelectNode={onSelectNode}
+            />
+          ))}
+        </div>
+        <aside className="internal-connection-panel" aria-label={`${module.name}内部连接`}>
+          <h3>内部连接</h3>
+          <div className="internal-connection-list">
+            {module.internalConnections.map((connection) => (
+              <article
+                className="internal-connection"
+                data-kind={connection.kind}
+                key={connection.id}
+              >
+                <strong>{connection.label}</strong>
+                <small>{moduleConnectionKindLabels[connection.kind]}</small>
+              </article>
+            ))}
+          </div>
+        </aside>
+      </div>
+    </section>
+  );
+}
+
+interface SearchResultsProps {
+  nodes: readonly AtlasNode[];
+  companies: ReadonlyMap<string, AtlasCompany>;
+  excludeNodeIds: ReadonlySet<string>;
+  selectedNodeId: string | null;
+  related: ReadonlySet<string> | null;
+  onSelectNode: (nodeId: string) => void;
+}
+
+function SearchResults({
+  nodes,
+  companies,
+  excludeNodeIds,
+  selectedNodeId,
+  related,
+  onSelectNode,
+}: SearchResultsProps) {
+  const orderedIds = nodes
+    .map(({ id }) => id)
+    .filter((nodeId) => !excludeNodeIds.has(nodeId));
+
+  if (orderedIds.length === 0) return null;
+
+  return (
+    <section className="search-result-strip" aria-label="搜索匹配节点">
+      <header>
+        <h2>搜索匹配节点</h2>
+        <p>搜索结果会临时显示可点击真实节点；材料细分 chip 仍留在模块内部。</p>
+      </header>
+      <NodeList
+        nodeIds={orderedIds}
+        nodes={new Map(nodes.map((node) => [node.id, node]))}
+        companies={companies}
+        selectedNodeId={selectedNodeId}
+        related={related}
+        onSelectNode={onSelectNode}
+      />
+    </section>
+  );
+}
+
 export function PosterAtlasCanvas({
   nodes,
   companies,
   edges,
   selectedNodeId,
   empty,
+  showSearchResults = false,
   onSelectNode,
   onResetSearch,
 }: PosterAtlasCanvasProps) {
+  const [selectedModuleId, setSelectedModuleId] =
+    useState<AtlasModuleId>(defaultModuleId);
   const nodeById = new Map(nodes.map((node) => [node.id, node]));
   const companyById = new Map(companies.map((company) => [company.id, company]));
   const nodeIdSet = new Set(nodes.map(({ id }) => id));
@@ -295,9 +462,23 @@ export function PosterAtlasCanvas({
   const related = selectedNodeId
     ? getNeighborhood(selectedNodeId, visibleEdges)
     : null;
+  const selectedNodeModuleId = selectedNodeId
+    ? getModuleIdForNode(selectedNodeId)
+    : null;
+  const activeModuleId = selectedNodeModuleId ?? selectedModuleId;
+  const selectedModule =
+    atlasModuleById.get(activeModuleId) ?? atlasModuleById.get(defaultModuleId);
+  const activeModuleNodeIds = selectedModule
+    ? getModuleRealNodeIds(selectedModule)
+    : new Set<string>();
+
+  useEffect(() => {
+    if (!selectedNodeModuleId || selectedNodeModuleId === selectedModuleId) return;
+    setSelectedModuleId(selectedNodeModuleId);
+  }, [selectedModuleId, selectedNodeModuleId]);
 
   return (
-    <section className="poster-workspace" aria-label="AI 算力系统连接图谱画布">
+    <section className="poster-workspace" aria-label="AI 算力模块化地图画布">
       <div className="poster-scroll">
         {empty ? (
           <div className="poster-empty">
@@ -310,132 +491,59 @@ export function PosterAtlasCanvas({
           <article className="system-map-sheet">
             <header className="system-map-hero">
               <div>
-                <p>从制造输入到算力落地</p>
-                <h1>AI 算力系统连接图谱</h1>
-                <small>材料进入产品，设备决定制造能力；中间链路说明各模块如何连接成 AI 集群。</small>
+                <p>从模块总览到内部节点</p>
+                <h1>AI 算力模块化地图</h1>
+                <small>
+                  先看材料、设备、芯片、封装、PCB、光互联、算力落地七个模块；再展开模块查看最小节点和连接。
+                </small>
               </div>
             </header>
 
-            <section className="system-layer material-layer" aria-label="材料输入层">
-              <header className="system-layer-heading">
-                <span>01</span>
-                <div>
-                  <h2>材料输入层</h2>
-                  <p>进入产品本身的物料：晶圆/衬底、封装、PCB 与光通信材料。</p>
-                </div>
-              </header>
-              <div className="material-grid">
-                {materialLanes.map((lane) => (
-                  <section className="input-card" key={lane.title}>
-                    <span className="input-target">输入到：{lane.target}</span>
-                    <h3>{lane.title}</h3>
-                    <p>{lane.summary}</p>
-                    <NodeList
-                      nodeIds={lane.nodeIds}
-                      nodes={nodeById}
-                      companies={companyById}
-                      selectedNodeId={selectedNodeId}
-                      related={related}
-                      onSelectNode={onSelectNode}
-                    />
-                  </section>
-                ))}
-              </div>
-            </section>
+            <ModuleOverview
+              selectedModuleId={activeModuleId}
+              onSelectModule={setSelectedModuleId}
+            />
 
-            <section className="system-layer main-flow-layer" aria-label="AI 算力主链路">
-              <header className="system-layer-heading">
-                <span>02</span>
-                <div>
-                  <h2>AI 算力主链路</h2>
-                  <p>从计算芯片、存储、封装、板级互联、光互联，到服务器、交换机和集群。</p>
-                </div>
-              </header>
-              <div className="main-chain">
-                {mainChain.map((stage, index) => (
-                  <section className="chain-stage" key={stage.title}>
-                    <div className="chain-stage-title">
-                      <span>{String(index + 1).padStart(2, "0")}</span>
-                      <h3>{stage.title}</h3>
-                    </div>
-                    <p>{stage.summary}</p>
-                    {stage.virtualItems ? (
-                      <div className="virtual-node-list">
-                        {stage.virtualItems.map((item) => (
-                          <span key={item}>{item}</span>
-                        ))}
-                      </div>
-                    ) : null}
-                    <NodeList
-                      nodeIds={stage.nodeIds}
-                      nodes={nodeById}
-                      companies={companyById}
-                      selectedNodeId={selectedNodeId}
-                      related={related}
-                      onSelectNode={onSelectNode}
-                    />
-                    {index < mainChain.length - 1 ? (
-                      <span className="chain-arrow" aria-hidden="true">→</span>
-                    ) : null}
-                  </section>
-                ))}
-              </div>
-            </section>
+            <ModuleConnections />
 
-            <section className="system-layer equipment-layer" aria-label="制造使能层">
-              <header className="system-layer-heading">
-                <span>03</span>
-                <div>
-                  <h2>制造使能层</h2>
-                  <p>设备通常不进入最终产品，但决定芯片、封装、PCB 和光模块能不能稳定量产。</p>
-                </div>
-              </header>
-              <div className="equipment-grid">
-                {equipmentLanes.map((lane) => (
-                  <section className="equipment-card" key={lane.title}>
-                    <span className="equipment-target">制造能力 ⇢ {lane.target}</span>
-                    <h3>{lane.title}</h3>
-                    <p>{lane.summary}</p>
-                  </section>
-                ))}
-              </div>
-            </section>
+            {showSearchResults ? (
+              <SearchResults
+                nodes={nodes}
+                companies={companyById}
+                excludeNodeIds={activeModuleNodeIds}
+                selectedNodeId={selectedNodeId}
+                related={related}
+                onSelectNode={onSelectNode}
+              />
+            ) : null}
 
-            <section className="connection-explainer" aria-label="关键连接说明">
-              <header>
-                <h2>关键连接说明</h2>
-                <p>实线表示物料或模块进入下游产品；虚线表示制造设备提供产能与良率约束。</p>
-              </header>
-              <div className="connection-grid">
-                {keyConnectionLabels.map((label) => (
-                  <article className="connection-card" key={label}>
-                    <strong>{label}</strong>
-                    <small>模块连接</small>
-                  </article>
-                ))}
-                {equipmentLanes.map((lane) => (
-                  <article className="connection-card connection-card-dashed" key={`equipment-${lane.title}`}>
-                    <strong>{lane.title} ⇢ {lane.target}</strong>
-                    <small>制造能力</small>
-                  </article>
-                ))}
-              </div>
-            </section>
+            {selectedModule ? (
+              <ExpandedModule
+                module={selectedModule}
+                nodes={nodeById}
+                companies={companyById}
+                selectedNodeId={selectedNodeId}
+                related={related}
+                onSelectNode={onSelectNode}
+              />
+            ) : null}
 
             <div className="visually-hidden" aria-label="可见产业关系">
               <h2>可见产业关系</h2>
               <ul>
                 {visibleEdges.map((edge) => (
                   <li key={`summary-${edge.id}`}>
-                    {nodeById.get(edge.from)?.name ?? edge.from} → {nodeById.get(edge.to)?.name ?? edge.to}（{relationshipTypeLabels[edge.type]}）
+                    {nodeById.get(edge.from)?.name ?? edge.from} →{" "}
+                    {nodeById.get(edge.to)?.name ?? edge.to}（
+                    {relationshipTypeLabels[edge.type]}）
                   </li>
                 ))}
               </ul>
             </div>
 
             <footer className="poster-footnote">
-              <span>点击真实节点查看技术解释、代表公司和来源证据</span>
-              <span>公司池与行情字段后续统一接入，当前先打通产业链连接流程</span>
+              <span>模块连接来自结构化边，不再靠散乱说明文字硬凑</span>
+              <span>细分材料节点先作为解释层，后续接公司和行情数据时再升级为真实节点</span>
             </footer>
           </article>
         )}
