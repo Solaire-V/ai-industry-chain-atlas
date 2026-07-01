@@ -173,14 +173,14 @@ describe("atlasSnapshotSchema", () => {
     const result = atlasSnapshotSchema.safeParse({
       nodes: [{ id: "inp", layer: "materials", kind: "material", name: "InP", summary: "用于高速光芯片的磷化铟材料", technology: "为高速激光器与探测器提供直接带隙化合物半导体基础。", barriers: ["晶体纯度"], drivers: ["高速光互联"], risks: ["良率"], companyIds: ["a"], sourceIds: ["s1"] }],
       companies: [{ id: "a", name: "A", ticker: "A", exchange: "NASDAQ", market: "US", currency: "USD" }],
-      industryEdges: [], supplyRelations: [], marketSnapshots: [], sources: [{ id: "s1", title: "Source", url: "https://example.com/source", publisher: "Example", checkedAt: "2026-06-30T00:00:00Z" }]
+      industryEdges: [], companyNodeRoles: [], supplyRelations: [], marketSnapshots: [], sources: [{ id: "s1", title: "Source", url: "https://example.com/source", publisher: "Example", checkedAt: "2026-06-30T00:00:00Z" }]
     });
     expect(result.success).toBe(false);
   });
 
   it("rejects a supply relation without evidence", () => {
     const result = atlasSnapshotSchema.safeParse({
-      nodes: [], companies: [], industryEdges: [], marketSnapshots: [], sources: [],
+      nodes: [], companies: [], industryEdges: [], companyNodeRoles: [], marketSnapshots: [], sources: [],
       supplyRelations: [{ id: "r1", supplierId: "a", customerId: "b", nodeId: "cpo", product: "optical engine", status: "company_confirmed", evidenceSourceIds: [] }]
     });
     expect(result.success).toBe(false);
@@ -224,13 +224,16 @@ export const sourceSchema = z.object({ id: requiredTextSchema, title: requiredTe
 export const industryEdgeSchema = z.object({ id: requiredTextSchema, from: requiredTextSchema, to: requiredTextSchema, type: z.enum(["supply", "integrate", "deploy"]) });
 export const supplyRelationSchema = z.object({ id: requiredTextSchema, supplierId: requiredTextSchema, customerId: requiredTextSchema, nodeId: requiredTextSchema, product: z.string().trim().min(2), status: relationStatusSchema, evidenceSourceIds: z.array(requiredTextSchema).min(1), announcedAt: z.string().date().optional() });
 export const marketSnapshotSchema = z.object({ companyId: requiredTextSchema, price: z.number().nonnegative(), changePct: z.number(), currency: z.string().length(3), tradedAt: z.string().datetime(), fetchedAt: z.string().datetime(), delayMinutes: z.number().int().nonnegative(), ttmEps: z.number().nullable(), ttmPe: z.number().positive().nullable() });
+export const companyNodeRoleSchema = z.object({ id: requiredTextSchema, companyId: requiredTextSchema, nodeId: requiredTextSchema, role: z.string().trim().min(2), product: z.string().trim().min(2).optional(), sourceIds: z.array(requiredTextSchema).min(1) });
 
 export const atlasSnapshotSchema = z.object({
   nodes: z.array(nodeSchema), companies: z.array(companySchema), industryEdges: z.array(industryEdgeSchema),
-  supplyRelations: z.array(supplyRelationSchema), marketSnapshots: z.array(marketSnapshotSchema), sources: z.array(sourceSchema)
-});
+  companyNodeRoles: z.array(companyNodeRoleSchema), supplyRelations: z.array(supplyRelationSchema),
+  marketSnapshots: z.array(marketSnapshotSchema), sources: z.array(sourceSchema)
+}).superRefine(validateSnapshotIntegrity);
 export type AtlasSnapshot = z.infer<typeof atlasSnapshotSchema>;
 export type AtlasMarket = z.infer<typeof marketSchema>;
+export type CompanyNodeRole = z.infer<typeof companyNodeRoleSchema>;
 ```
 
 - [ ] **Step 4: Run the schema tests**
@@ -286,7 +289,7 @@ high-layer-pcb, switch-asic, pluggable-optics, optical-engine, cpo,
 hbm, ethernet-switch, ai-server, ai-cluster
 ```
 
-Include at least these public companies as role-specific representatives: Broadcom (`AVGO`), Marvell (`MRVL`), Coherent (`COHR`), Lumentum (`LITE`), Corning (`GLW`), TSMC (`TSM`), NVIDIA (`NVDA`), SK hynix (`000660.KS`), Micron (`MU`), Samsung Electronics (`005930.KS`), Arista Networks (`ANET`), Fabrinet (`FN`), Zhongji Innolight (`300308.SZ`), Eoptolink (`300502.SZ`), Shennan Circuits (`002916.SZ`), Victory Giant (`300476.SZ`), Shengyi Technology (`600183.SH`), and Kingboard Laminates (`1888.HK`). Each material node must reference at least two companies and one primary source.
+Include at least these public companies as role-specific representatives: Broadcom (`AVGO`), Marvell (`MRVL`), Coherent (`COHR`), Lumentum (`LITE`), Corning (`GLW`), TSMC (`TSM`), NVIDIA (`NVDA`), SK hynix (`000660.KS`), Micron (`MU`), Samsung Electronics (`005930.KS`), Arista Networks (`ANET`), Fabrinet (`FN`), Zhongji Innolight (`300308.SZ`), Eoptolink (`300502.SZ`), Shennan Circuits (`002916.SZ`), Victory Giant (`300476.SZ`), Shengyi Technology (`600183.SH`), and Kingboard Laminates (`1888.HK`). Each material node must reference at least two companies and one primary source. Every company-node association must also have a `companyNodeRole` record naming the role or product and citing direct evidence source IDs.
 
 Add this highlighted path as typed industry edges:
 
@@ -297,7 +300,9 @@ switch-asic -> cpo
 cpo -> ai-server -> ai-cluster
 ```
 
-Add only publicly evidenced supply relations. Seed at least the NVIDIA–SK hynix memory partnership as a cross-layer example and Broadcom's internally integrated CPO platform as a company-to-node capability; do not invent an unnamed customer.
+Add only publicly evidenced supply relations. Use a direct official source that explicitly supports SK hynix supplying HBM to NVIDIA; the June 7, 2026 multiyear memory partnership may be retained as additional roadmap evidence, but must not alone be presented as HBM supply evidence. Broadcom's internally integrated CPO platform remains a company-to-node capability; do not invent an unnamed customer.
+
+The snapshot schema must reject duplicate IDs and dangling references at runtime, including node company/source references, company-node roles, industry edges, supply relations, market snapshots and evidence sources. Schema-level tests must cover every negative reference class; repository tests additionally prove the fixture is parsed through that runtime boundary. Value-flow edges must not encode taxonomy: lasers and modulators feed optical engines directly rather than appearing as downstream products of a generic optical-chip category.
 
 - [ ] **Step 4: Implement the repository boundary**
 
