@@ -260,6 +260,46 @@ const getSwimlaneNodeTitle = (id: SwimlaneNode["stageId"]) => {
   return swimlaneNodes.find((node) => node.stageId === id)?.title ?? id;
 };
 
+function getInspectorConnectionGroups(
+  stageId: AtlasStageId,
+  connections: readonly SwimlaneConnection[],
+) {
+  return [
+    {
+      id: "incoming",
+      title: "上游输入",
+      helper: "物料 / 产品流入当前模块",
+      items: connections.filter(
+        (connection) => connection.kind === "flow" && connection.to === stageId,
+      ),
+    },
+    {
+      id: "incoming-enable",
+      title: "外部使能",
+      helper: "设备、软件或工具链支撑当前模块",
+      items: connections.filter(
+        (connection) => connection.kind === "enable" && connection.to === stageId,
+      ),
+    },
+    {
+      id: "outgoing",
+      title: "下游输出",
+      helper: "当前模块继续流向下游",
+      items: connections.filter(
+        (connection) => connection.kind === "flow" && connection.from === stageId,
+      ),
+    },
+    {
+      id: "outgoing-enable",
+      title: "支撑下游",
+      helper: "当前模块作为使能能力支撑其他环节",
+      items: connections.filter(
+        (connection) => connection.kind === "enable" && connection.from === stageId,
+      ),
+    },
+  ].filter(({ items }) => items.length > 0);
+}
+
 function isConnectionActive(
   connection: SwimlaneConnection,
   activeStageId: AtlasStageId,
@@ -542,6 +582,10 @@ function StageInspector({
   const stageChainConnections = swimlaneConnections.filter(
     (connection) => connection.from === stage.id || connection.to === stage.id,
   );
+  const stageConnectionGroups = getInspectorConnectionGroups(
+    stage.id,
+    stageChainConnections,
+  );
   const realNodes = [
     ...stage.diagram.inputs,
     ...stage.diagram.core,
@@ -556,56 +600,78 @@ function StageInspector({
       aria-label={`${stage.name}流程详情`}
       data-tone={stage.tone}
     >
-      <div className="stage-inspector-heading">
-        <span>{String(stage.order).padStart(2, "0")}</span>
+      <div className="stage-inspector-hero">
+        <span className="stage-inspector-order">
+          {String(stage.order).padStart(2, "0")}
+        </span>
         <div>
-          <h2>{stage.name}</h2>
           <small>{stageLaneLabels[stage.id]}</small>
+          <h2>{stage.name}</h2>
+          <p>{stage.role}</p>
         </div>
       </div>
 
-      <section>
-        <h3>作用</h3>
-        <p>{stage.role}</p>
+      <section className="stage-inspector-metrics" aria-label="模块信息摘要">
+        <div>
+          <span>连接</span>
+          <strong>{stageChainConnections.length}</strong>
+          <small>条主链关系</small>
+        </div>
+        <div>
+          <span>流程</span>
+          <strong>{stage.internalConnections.length}</strong>
+          <small>步内部链路</small>
+        </div>
+        <div>
+          <span>深入</span>
+          <strong>{realNodes.length}</strong>
+          <small>个可点节点</small>
+        </div>
       </section>
 
-      <section>
-        <h3>上下游连接</h3>
-        <ol className="stage-inspector-chain-list">
-          {stageChainConnections.map((connection) => {
-            const isOutgoing = connection.from === stage.id;
-            const connectedStageId = isOutgoing ? connection.to : connection.from;
-            const connectedStageTitle = getSwimlaneNodeTitle(connectedStageId);
-            const badge =
-              connection.kind === "enable" ? "使能" : isOutgoing ? "输出" : "输入";
-            return (
-              <li key={connection.id}>
-                <span data-kind={connection.kind}>{badge}</span>
-                <div>
-                  <strong>{connection.label}</strong>
-                  <small>
-                    {isOutgoing ? "流向" : "来自"}：{connectedStageTitle}
-                    {" · "}
-                    {connection.summary}
-                  </small>
-                </div>
-              </li>
-            );
-          })}
-        </ol>
-      </section>
-
-      <section>
-        <h3>输入</h3>
-        <ul>
-          {stage.diagram.inputs.map((node) => (
-            <li key={node.id}>{node.label}</li>
+      <section className="stage-inspector-section">
+        <div className="stage-inspector-section-heading">
+          <div>
+            <h3>连接总览</h3>
+            <small>与画布高亮一致，按关系类型分组</small>
+          </div>
+        </div>
+        <div className="stage-inspector-connection-groups">
+          {stageConnectionGroups.map((group) => (
+            <article key={group.id} className="stage-inspector-connection-group">
+              <header>
+                <strong>{group.title}</strong>
+                <small>{group.helper}</small>
+              </header>
+              <ol className="stage-inspector-chain-list">
+                {group.items.map((connection) => {
+                  const isOutgoing = connection.from === stage.id;
+                  const connectedStageId = isOutgoing ? connection.to : connection.from;
+                  const connectedStageTitle = getSwimlaneNodeTitle(connectedStageId);
+                  return (
+                    <li key={connection.id} data-kind={connection.kind}>
+                      <strong>{connection.label}</strong>
+                      <small>
+                        {isOutgoing ? "流向" : "来自"}：{connectedStageTitle}
+                        {" · "}
+                        {connection.summary}
+                      </small>
+                    </li>
+                  );
+                })}
+              </ol>
+            </article>
           ))}
-        </ul>
+        </div>
       </section>
 
-      <section>
-        <h3>核心流程</h3>
+      <section className="stage-inspector-section">
+        <div className="stage-inspector-section-heading">
+          <div>
+            <h3>内部主流程</h3>
+            <small>{stage.diagram.summary}</small>
+          </div>
+        </div>
         <ol className="stage-inspector-steps">
           {stage.internalConnections.map((connection, index) => (
             <li key={connection.id}>
@@ -619,18 +685,41 @@ function StageInspector({
         </ol>
       </section>
 
-      <section>
-        <h3>输出</h3>
-        <ul>
-          {stage.diagram.outputs.map((node) => (
-            <li key={node.id}>{node.label}</li>
-          ))}
-        </ul>
+      <section className="stage-inspector-section">
+        <div className="stage-inspector-section-heading">
+          <div>
+            <h3>输入 / 输出</h3>
+            <small>保留全量节点，用 chips 扫读</small>
+          </div>
+        </div>
+        <div className="stage-inspector-io-grid">
+          <div>
+            <h4>输入</h4>
+            <ul className="stage-inspector-chip-list">
+              {stage.diagram.inputs.map((node) => (
+                <li key={node.id}>{node.label}</li>
+              ))}
+            </ul>
+          </div>
+          <div>
+            <h4>输出</h4>
+            <ul className="stage-inspector-chip-list">
+              {stage.diagram.outputs.map((node) => (
+                <li key={node.id}>{node.label}</li>
+              ))}
+            </ul>
+          </div>
+        </div>
       </section>
 
       {realNodes.length ? (
-        <section>
-          <h3>可点流程节点</h3>
+        <section className="stage-inspector-section">
+          <div className="stage-inspector-section-heading">
+            <div>
+              <h3>继续查看</h3>
+              <small>点击进入细分节点、公司与证据</small>
+            </div>
+          </div>
           <div className="stage-inspector-node-list">
             {realNodes.map((node) => (
               <StageNodeButton

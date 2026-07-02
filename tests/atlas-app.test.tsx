@@ -91,7 +91,7 @@ describe("AtlasApp", () => {
     const boardInspector = screen.getByRole("complementary", {
       name: "板级系统流程详情",
     });
-    expect(within(boardInspector).getByRole("heading", { name: "上下游连接" })).toBeInTheDocument();
+    expect(within(boardInspector).getByRole("heading", { name: "连接总览" })).toBeInTheDocument();
     expect(within(boardInspector).getByText("材料 → 板级系统")).toBeInTheDocument();
     expect(within(boardInspector).getByText("设备 ⇢ 板级系统")).toBeInTheDocument();
     expect(within(boardInspector).getByText("先进封装 → 板级系统")).toBeInTheDocument();
