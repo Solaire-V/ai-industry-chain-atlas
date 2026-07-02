@@ -31,7 +31,7 @@ const renderAtlas = (
 };
 
 describe("AtlasApp", () => {
-  it("renders the three-layer 9-stage atlas without legacy side navigation or relationship controls", () => {
+  it("renders the swimlane workbench with product navigation and no legacy controls", () => {
     renderAtlas();
 
     expect(
@@ -43,9 +43,15 @@ describe("AtlasApp", () => {
     expect(
       screen.getByRole("heading", { name: "AI 产业链三层地图" }),
     ).toBeInTheDocument();
-    const mainChain = screen.getByRole("region", { name: "AI 产业链 9 段主链" });
-    expect(mainChain).toBeInTheDocument();
-    expect(mainChain).toHaveClass("stage-chain-section");
+    expect(
+      screen.getByRole("navigation", { name: "AI 产业链目录" }),
+    ).toBeInTheDocument();
+    for (const name of ["主界面", "节点库", "公司库", "行情数据", "供需关系", "数据设置"]) {
+      expect(screen.getByRole("button", { name: new RegExp(name) })).toBeInTheDocument();
+    }
+    const canvas = screen.getByRole("region", { name: "产业链泳道画布" });
+    expect(canvas).toBeInTheDocument();
+    expect(canvas).toHaveClass("swimlane-canvas-card");
 
     for (const name of [
       "材料",
@@ -59,22 +65,25 @@ describe("AtlasApp", () => {
       "算力应用",
     ]) {
       expect(
-        within(mainChain).getByRole("button", { name: new RegExp(name) }),
+        within(canvas).getByRole("button", { name: new RegExp(name) }),
       ).toBeInTheDocument();
     }
 
-    expect(screen.getByText("完整内部流程图")).toBeInTheDocument();
-    expect(screen.getByLabelText("光互联完整内部流程图")).toHaveClass("stage-diagram");
-    expect(screen.getByText("可更新数据层")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "AI 产业链泳道图" })).toBeInTheDocument();
+    expect(screen.getByRole("complementary", { name: "光互联流程详情" })).toBeInTheDocument();
+    expect(screen.queryByText("可更新数据层")).not.toBeInTheDocument();
   });
 
-  it("shows material minimum subnodes in the data layer without crowding the main chain", () => {
+  it("keeps material minimum subnodes in the node library instead of the main canvas", () => {
     renderAtlas();
-    const mainChain = screen.getByRole("region", { name: "AI 产业链 9 段主链" });
+    const canvas = screen.getByRole("region", { name: "产业链泳道画布" });
 
-    fireEvent.click(within(mainChain).getByRole("button", { name: /材料/ }));
+    fireEvent.click(within(canvas).getByRole("button", { name: /材料/ }));
 
-    expect(screen.getByRole("heading", { name: "材料完整内部流程图" })).toBeInTheDocument();
+    expect(screen.getByRole("complementary", { name: "材料流程详情" })).toBeInTheDocument();
+    expect(screen.queryByText("光刻胶")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /节点库/ }));
+    expect(screen.getByRole("heading", { name: "节点库" })).toBeInTheDocument();
     expect(screen.getByText("硅片")).toBeInTheDocument();
     expect(screen.getAllByText("SOI").length).toBeGreaterThan(0);
     expect(screen.getByText("InP")).toBeInTheDocument();
@@ -84,40 +93,40 @@ describe("AtlasApp", () => {
     expect(screen.getByText("ABF")).toBeInTheDocument();
     expect(screen.getByText("铜箔")).toBeInTheDocument();
     expect(screen.getByText("液冷液")).toBeInTheDocument();
-    expect(screen.getByText("公司 / 行情 / PE")).toBeInTheDocument();
-    expect(screen.getByText("供应关系 / 证据")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /行情数据/ }));
+    expect(screen.getByRole("heading", { name: "行情数据" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /供需关系/ }));
+    expect(screen.getByRole("heading", { name: "供需关系" })).toBeInTheDocument();
   });
 
   it("shows equipment as an upstream stage and as manufacturing enablement", () => {
     renderAtlas();
-    const mainChain = screen.getByRole("region", { name: "AI 产业链 9 段主链" });
+    const canvas = screen.getByRole("region", { name: "产业链泳道画布" });
 
-    fireEvent.click(within(mainChain).getByRole("button", { name: /设备/ }));
+    fireEvent.click(within(canvas).getByRole("button", { name: /设备/ }));
 
-    expect(screen.getByRole("heading", { name: "设备完整内部流程图" })).toBeInTheDocument();
-    expect(screen.getByText("前道设备")).toBeInTheDocument();
-    expect(screen.getByText("光刻")).toBeInTheDocument();
-    expect(screen.getByText("刻蚀")).toBeInTheDocument();
-    expect(screen.getByText("薄膜沉积")).toBeInTheDocument();
-    expect(screen.getByText("探针台 / 测试机")).toBeInTheDocument();
-    expect(screen.getByText("光耦合")).toBeInTheDocument();
-    expect(screen.getByText("设备 ⇢ 光互联")).toBeInTheDocument();
+    expect(screen.getByRole("complementary", { name: "设备流程详情" })).toBeInTheDocument();
+    expect(screen.getByText(/前道设备/)).toBeInTheDocument();
+    expect(screen.getByText(/封装设备/)).toBeInTheDocument();
+    expect(screen.getAllByText(/测试设备/).length).toBeGreaterThan(0);
+    expect(screen.getByText(/PCB 设备/)).toBeInTheDocument();
+    expect(screen.getByText(/光模块设备/)).toBeInTheDocument();
   });
 
   it("defaults to optical interconnect and shows a complete CPO internal flow", () => {
     renderAtlas();
-    const mainChain = screen.getByRole("region", { name: "AI 产业链 9 段主链" });
+    const canvas = screen.getByRole("region", { name: "产业链泳道画布" });
 
-    expect(within(mainChain).getByRole("button", { name: /光互联/ })).toHaveAttribute(
+    expect(within(canvas).getByRole("button", { name: /光互联/ })).toHaveAttribute(
       "aria-pressed",
       "true",
     );
-    expect(screen.getByRole("heading", { name: "光互联完整内部流程图" })).toBeInTheDocument();
+    expect(screen.getByRole("complementary", { name: "光互联流程详情" })).toBeInTheDocument();
     expect(screen.getByText("InP / SOI")).toBeInTheDocument();
     expect(screen.getByText("光耦合 / 高速测试设备")).toBeInTheDocument();
     expect(screen.getByText("光芯片")).toBeInTheDocument();
     expect(screen.getByText("激光器")).toBeInTheDocument();
-    expect(screen.getByText("DSP")).toBeInTheDocument();
+    expect(screen.getAllByText(/DSP/).length).toBeGreaterThan(0);
     expect(screen.getByText("光引擎")).toBeInTheDocument();
     expect(screen.getByText("CPO")).toBeInTheDocument();
     expect(screen.getByText("交换机 / AI 集群")).toBeInTheDocument();
@@ -173,7 +182,7 @@ describe("AtlasApp", () => {
     expect(
       screen.queryByRole("navigation", { name: "产业层级" }),
     ).not.toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "AI 算力模块化地图" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "AI 产业链泳道图" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /AI 芯片/ })).toBeInTheDocument();
     expect(screen.queryByRole("group", { name: "关系模式" })).not.toBeInTheDocument();
   });
@@ -205,13 +214,12 @@ describe("AtlasApp", () => {
 
     fireEvent.change(search, { target: { value: "光刻胶" } });
 
-    const mainChain = screen.getByRole("region", { name: "AI 产业链 9 段主链" });
-    expect(within(mainChain).getByRole("button", { name: /材料/ })).toHaveAttribute(
+    const canvas = screen.getByRole("region", { name: "产业链泳道画布" });
+    expect(within(canvas).getByRole("button", { name: /材料/ })).toHaveAttribute(
       "aria-pressed",
       "true",
     );
-    expect(screen.getByRole("heading", { name: "材料完整内部流程图" })).toBeInTheDocument();
-    expect(screen.getByText("光刻胶")).toBeInTheDocument();
+    expect(screen.getByRole("complementary", { name: "材料流程详情" })).toBeInTheDocument();
     expect(screen.queryByText("没有找到匹配的节点或公司")).not.toBeInTheDocument();
 
     act(() => vi.advanceTimersByTime(200));
@@ -242,12 +250,12 @@ describe("AtlasApp", () => {
   it("keeps the selected stage for unmatched debounced search", () => {
     vi.useFakeTimers();
     const { replace } = renderAtlas();
-    const mainChain = screen.getByRole("region", { name: "AI 产业链 9 段主链" });
+    const canvas = screen.getByRole("region", { name: "产业链泳道画布" });
     const search = screen.getByRole("searchbox", {
       name: "搜索节点、公司或代码",
     });
 
-    fireEvent.click(within(mainChain).getByRole("button", { name: /服务器网络/ }));
+    fireEvent.click(within(canvas).getByRole("button", { name: /服务器网络/ }));
     fireEvent.change(search, { target: { value: "silicon photonics" } });
     act(() => vi.advanceTimersByTime(200));
 
@@ -265,12 +273,12 @@ describe("AtlasApp", () => {
 
     fireEvent.change(search, { target: { value: "HBM" } });
 
-    const mainChain = screen.getByRole("region", { name: "AI 产业链 9 段主链" });
-    expect(within(mainChain).getByRole("button", { name: /HBM 存储/ })).toHaveAttribute(
+    const canvas = screen.getByRole("region", { name: "产业链泳道画布" });
+    expect(within(canvas).getByRole("button", { name: /HBM 存储/ })).toHaveAttribute(
       "aria-pressed",
       "true",
     );
-    expect(screen.getByRole("heading", { name: "HBM 存储完整内部流程图" })).toBeInTheDocument();
+    expect(screen.getByRole("complementary", { name: "HBM 存储流程详情" })).toBeInTheDocument();
     expect(screen.getByTestId("node-hbm")).toBeInTheDocument();
 
     act(() => vi.advanceTimersByTime(200));
@@ -281,9 +289,9 @@ describe("AtlasApp", () => {
 
   it("preserves the selected stage when closing a node drawer", () => {
     const { push, replace } = renderAtlas();
-    const mainChain = screen.getByRole("region", { name: "AI 产业链 9 段主链" });
+    const canvas = screen.getByRole("region", { name: "产业链泳道画布" });
 
-    fireEvent.click(within(mainChain).getByRole("button", { name: /服务器网络/ }));
+    fireEvent.click(within(canvas).getByRole("button", { name: /服务器网络/ }));
     expect(replace).toHaveBeenLastCalledWith(
       "?layer=interconnect&mode=supply&stage=server-network",
     );
@@ -613,7 +621,7 @@ describe("AtlasApp", () => {
     );
     fireEvent.popState(window);
 
-    expect(screen.getByRole("heading", { name: "AI 算力模块化地图" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "AI 产业链泳道图" })).toBeInTheDocument();
     expect(screen.getByRole("dialog", { name: "共封装光学" })).toBeInTheDocument();
   });
 
@@ -621,8 +629,8 @@ describe("AtlasApp", () => {
     renderAtlas(
       new URLSearchParams("layer=interconnect&mode=supply&stage=optical-interconnect&q=共封装"),
     );
-    const mainChain = screen.getByRole("region", { name: "AI 产业链 9 段主链" });
-    expect(within(mainChain).getByRole("button", { name: /光互联/ })).toHaveAttribute(
+    const canvas = screen.getByRole("region", { name: "产业链泳道画布" });
+    expect(within(canvas).getByRole("button", { name: /光互联/ })).toHaveAttribute(
       "aria-pressed",
       "true",
     );
@@ -666,8 +674,8 @@ describe("AtlasApp", () => {
 
     fireEvent.keyDown(document, { key: "Escape" });
     push.mockClear();
-    const mainChain = screen.getByRole("region", { name: "AI 产业链 9 段主链" });
-    fireEvent.click(within(mainChain).getByRole("button", { name: /服务器网络/ }));
+    const canvas = screen.getByRole("region", { name: "产业链泳道画布" });
+    fireEvent.click(within(canvas).getByRole("button", { name: /服务器网络/ }));
     fireEvent.click(screen.getByTestId("node-ai-server"));
     expect(push).toHaveBeenCalledTimes(1);
   });
