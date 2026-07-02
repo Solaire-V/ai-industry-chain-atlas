@@ -2419,11 +2419,12 @@ body {
   color: var(--atlas-muted);
   font-size: 11px;
   line-height: 1.35;
+  white-space: nowrap;
 }
 
 .atlas-workbench-main {
   display: grid;
-  grid-template-columns: minmax(720px, 1fr) 360px;
+  grid-template-columns: minmax(0, 1fr) 348px;
   gap: 16px;
   min-width: 0;
   min-height: 0;
@@ -2460,8 +2461,8 @@ body {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 18px;
-  padding: 18px 20px 12px;
+  gap: 14px;
+  padding: 12px 16px 10px;
   border-bottom: 1px solid rgba(220, 229, 242, 0.72);
   background: rgba(255, 255, 255, 0.9);
   backdrop-filter: blur(12px);
@@ -2470,7 +2471,7 @@ body {
 .swimlane-toolbar h1 {
   margin: 0;
   color: var(--atlas-text);
-  font-size: 22px;
+  font-size: 19px;
   font-weight: 920;
   letter-spacing: -0.04em;
 }
@@ -2482,12 +2483,32 @@ body {
   line-height: 1.5;
 }
 
+.swimlane-focus-pill {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  align-items: center;
+  margin-top: 8px;
+  padding: 6px 10px;
+  color: var(--atlas-blue);
+  font-size: 12px;
+  font-weight: 850;
+  border: 1px solid #c9d8ff;
+  border-radius: 999px;
+  background: var(--atlas-blue-soft);
+}
+
+.swimlane-focus-pill span {
+  color: var(--atlas-muted);
+  font-weight: 650;
+}
+
 .swimlane-legend {
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 8px 12px;
-  min-width: 220px;
+  min-width: 206px;
   color: var(--atlas-muted);
   font-size: 12px;
 }
@@ -2517,19 +2538,29 @@ body {
 .swimlane-map-scroll {
   min-width: 0;
   min-height: 0;
-  overflow: auto;
+  overflow: hidden;
+}
+
+.swimlane-map-frame {
+  position: relative;
+  width: calc(var(--map-width) * var(--map-scale));
+  height: calc(var(--map-height) * var(--map-scale));
+  margin: 0 auto;
 }
 
 .swimlane-map {
-  position: relative;
-  width: 100%;
-  min-width: 1040px;
-  height: 650px;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: var(--map-width);
+  height: var(--map-height);
   overflow: hidden;
   background:
     linear-gradient(rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.86)),
     url("/images/atlas-swimlane-visual.png") center / cover no-repeat,
     linear-gradient(180deg, #f8fbff, #ffffff);
+  transform: scale(var(--map-scale));
+  transform-origin: left top;
 }
 
 .swimlane-map::before,
@@ -2830,6 +2861,7 @@ body {
   color: var(--atlas-text);
   font-size: 13px;
   line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 
 .stage-inspector-steps small {
@@ -3004,7 +3036,7 @@ body {
 
 @media (max-width: 1180px) {
   .atlas-workbench-main {
-    grid-template-columns: minmax(680px, 1fr) 330px;
+    grid-template-columns: minmax(0, 1fr) 326px;
   }
 
   .workspace-data-grid {

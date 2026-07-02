@@ -41,6 +41,10 @@ type WorkspaceView =
 
 type SwimlaneId = "upstream" | "midstream" | "downstream" | "support";
 
+const SWIMLANE_MAP_WIDTH = 1040;
+const SWIMLANE_MAP_HEIGHT = 650;
+const SWIMLANE_MAP_MIN_SCALE = 0.32;
+
 interface SwimlaneNode {
   stageId: AtlasStageId | "software-ip";
   title: string;
@@ -66,11 +70,11 @@ const workspaceViews: readonly {
   description: string;
 }[] = [
   { id: "canvas", title: "主界面", description: "产业链全景画布" },
-  { id: "nodes", title: "节点库", description: "材料/设备/芯片等节点" },
-  { id: "companies", title: "公司库", description: "龙头公司与业务分布" },
-  { id: "markets", title: "行情数据", description: "股价 / PE / 市值等" },
-  { id: "supply", title: "供需关系", description: "上下游供应与客户" },
-  { id: "settings", title: "数据设置", description: "数据源与更新配置" },
+  { id: "nodes", title: "节点库", description: "细分节点" },
+  { id: "companies", title: "公司库", description: "公司与业务" },
+  { id: "markets", title: "行情数据", description: "股价 / PE / 市值" },
+  { id: "supply", title: "供需关系", description: "供应与客户" },
+  { id: "settings", title: "数据设置", description: "数据源配置" },
 ];
 
 const laneLabels: Readonly<Record<SwimlaneId, string>> = {
@@ -426,8 +430,46 @@ function SwimlaneCanvas({
   onSelectStage: (stageId: AtlasStageId) => void;
 }) {
   const canvasRef = useRef<HTMLElement | null>(null);
+  const mapScrollRef = useRef<HTMLDivElement | null>(null);
+  const [mapScale, setMapScale] = useState(1);
+  const activeStage = atlasStageById.get(activeStageId);
 
   useEffect(() => {
+    const mapContainer = mapScrollRef.current;
+    if (!mapContainer) return;
+
+    const updateMapScale = () => {
+      const availableWidth = mapContainer.clientWidth;
+      if (!availableWidth) {
+        setMapScale(1);
+        return;
+      }
+
+      setMapScale(
+        Math.min(
+          1,
+          Math.max(
+            SWIMLANE_MAP_MIN_SCALE,
+            (availableWidth - 8) / SWIMLANE_MAP_WIDTH,
+          ),
+        ),
+      );
+    };
+
+    updateMapScale();
+
+    if (typeof ResizeObserver === "undefined") {
+      window.addEventListener("resize", updateMapScale);
+      return () => window.removeEventListener("resize", updateMapScale);
+    }
+
+    const resizeObserver = new ResizeObserver(updateMapScale);
+    resizeObserver.observe(mapContainer);
+    return () => resizeObserver.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (mapScale < 0.98) return;
     const selectedStage = canvasRef.current?.querySelector<HTMLElement>(
       `[data-stage-id="${activeStageId}"]`,
     );
@@ -437,7 +479,7 @@ function SwimlaneCanvas({
       block: "nearest",
       inline: "center",
     });
-  }, [activeStageId]);
+  }, [activeStageId, mapScale]);
 
   return (
     <section
@@ -449,6 +491,10 @@ function SwimlaneCanvas({
         <div>
           <h1>AI 产业链泳道图</h1>
           <p>第一屏只看流程：材料与设备如何进入制造集成，最后落到服务器和应用。</p>
+          <div className="swimlane-focus-pill" aria-live="polite">
+            当前：{activeStage?.name ?? "主流程"}
+            <span>点击模块查看输入 / 核心流程 / 输出</span>
+          </div>
         </div>
         <div className="swimlane-legend" aria-label="连接类型">
           <span><i data-kind="flow" />物料/产品流</span>
@@ -456,8 +502,19 @@ function SwimlaneCanvas({
         </div>
       </header>
 
-      <div className="swimlane-map-scroll">
-        <div className="swimlane-map">
+      <div
+        ref={mapScrollRef}
+        className="swimlane-map-scroll"
+        style={
+          {
+            "--map-scale": mapScale,
+            "--map-width": `${SWIMLANE_MAP_WIDTH}px`,
+            "--map-height": `${SWIMLANE_MAP_HEIGHT}px`,
+          } as CSSProperties
+        }
+      >
+        <div className="swimlane-map-frame">
+          <div className="swimlane-map">
           <div className="swimlane-label swimlane-label-upstream">
             {laneLabels.upstream}
           </div>
@@ -519,6 +576,7 @@ function SwimlaneCanvas({
               onSelectStage={onSelectStage}
             />
           ))}
+          </div>
         </div>
       </div>
     </section>
