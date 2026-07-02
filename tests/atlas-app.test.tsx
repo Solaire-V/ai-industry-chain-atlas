@@ -74,6 +74,52 @@ describe("AtlasApp", () => {
     expect(screen.queryByText("可更新数据层")).not.toBeInTheDocument();
   });
 
+  it("keeps main canvas connections aligned with the inspector chain summary", () => {
+    renderAtlas();
+    const canvas = screen.getByRole("region", { name: "产业链泳道画布" });
+
+    for (const label of [
+      "材料 → 板级系统",
+      "设备 ⇢ HBM",
+      "设备 ⇢ 板级系统",
+      "服务器网络 → 算力应用",
+    ]) {
+      expect(canvas.querySelector(`path[aria-label="${label}"]`)).toBeInTheDocument();
+    }
+
+    fireEvent.click(within(canvas).getByRole("button", { name: /板级系统/ }));
+    const boardInspector = screen.getByRole("complementary", {
+      name: "板级系统流程详情",
+    });
+    expect(within(boardInspector).getByRole("heading", { name: "上下游连接" })).toBeInTheDocument();
+    expect(within(boardInspector).getByText("材料 → 板级系统")).toBeInTheDocument();
+    expect(within(boardInspector).getByText("设备 ⇢ 板级系统")).toBeInTheDocument();
+    expect(within(boardInspector).getByText("先进封装 → 板级系统")).toBeInTheDocument();
+    expect(within(boardInspector).getByText("板级系统 → 服务器网络")).toBeInTheDocument();
+
+    fireEvent.click(within(canvas).getByRole("button", { name: /HBM 存储/ }));
+    const hbmInspector = screen.getByRole("complementary", {
+      name: "HBM 存储流程详情",
+    });
+    expect(within(hbmInspector).getByText("材料 → HBM")).toBeInTheDocument();
+    expect(within(hbmInspector).getByText("设备 ⇢ HBM")).toBeInTheDocument();
+    expect(within(hbmInspector).getByText("HBM → 先进封装")).toBeInTheDocument();
+
+    fireEvent.click(within(canvas).getByRole("button", { name: /AI 芯片/ }));
+    const chipInspector = screen.getByRole("complementary", {
+      name: "AI 芯片流程详情",
+    });
+    expect(within(chipInspector).getByText("软件 / IP 工具链 ⇢ AI 芯片")).toBeInTheDocument();
+
+    fireEvent.click(within(canvas).getByRole("button", { name: /服务器网络/ }));
+    const serverInspector = screen.getByRole("complementary", {
+      name: "服务器网络流程详情",
+    });
+    expect(
+      within(serverInspector).getByText("软件 / IP 工具链 ⇢ 服务器网络"),
+    ).toBeInTheDocument();
+  });
+
   it("keeps material minimum subnodes in the node library instead of the main canvas", () => {
     renderAtlas();
     const canvas = screen.getByRole("region", { name: "产业链泳道画布" });
@@ -106,11 +152,11 @@ describe("AtlasApp", () => {
     fireEvent.click(within(canvas).getByRole("button", { name: /设备/ }));
 
     expect(screen.getByRole("complementary", { name: "设备流程详情" })).toBeInTheDocument();
-    expect(screen.getByText(/前道设备/)).toBeInTheDocument();
-    expect(screen.getByText(/封装设备/)).toBeInTheDocument();
+    expect(screen.getAllByText(/前道设备/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/封装设备/).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/测试设备/).length).toBeGreaterThan(0);
-    expect(screen.getByText(/PCB 设备/)).toBeInTheDocument();
-    expect(screen.getByText(/光模块设备/)).toBeInTheDocument();
+    expect(screen.getAllByText(/PCB 设备/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/光模块设备/).length).toBeGreaterThan(0);
   });
 
   it("defaults to optical interconnect and shows a complete CPO internal flow", () => {

@@ -2837,6 +2837,58 @@ body {
   list-style: none;
 }
 
+.stage-inspector-chain-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.stage-inspector-chain-list li {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 9px;
+  align-items: start;
+  padding: 9px;
+  border: 1px solid var(--atlas-border);
+  border-radius: 13px;
+  background: var(--atlas-surface-soft);
+}
+
+.stage-inspector-chain-list li > span {
+  display: grid;
+  min-width: 34px;
+  place-items: center;
+  padding: 4px 6px;
+  color: var(--atlas-blue);
+  font-size: 11px;
+  font-weight: 900;
+  border-radius: 999px;
+  background: var(--atlas-blue-soft);
+}
+
+.stage-inspector-chain-list li > span[data-kind="enable"] {
+  color: var(--atlas-green);
+  background: #e8f7ef;
+}
+
+.stage-inspector-chain-list strong {
+  display: block;
+  color: var(--atlas-text);
+  font-size: 13px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.stage-inspector-chain-list small {
+  display: block;
+  margin-top: 3px;
+  color: var(--atlas-muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
 .stage-inspector-steps li {
   display: grid;
   grid-template-columns: 28px minmax(0, 1fr);

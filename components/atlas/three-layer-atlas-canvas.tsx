@@ -13,8 +13,10 @@ import {
   defaultStageId,
   findStageBySearch,
   getStageIdForNode,
+  mainChainConnections,
   type AtlasStage,
   type AtlasStageId,
+  type MainChainConnection,
   type StageConnectionKind,
 } from "@/lib/atlas/stage-map";
 
@@ -62,6 +64,7 @@ interface SwimlaneConnection {
   kind: StageConnectionKind;
   path: string;
   label: string;
+  summary: string;
 }
 
 const workspaceViews: readonly {
@@ -180,117 +183,33 @@ const swimlaneNodes: readonly SwimlaneNode[] = [
   },
 ];
 
-const swimlaneConnections: readonly SwimlaneConnection[] = [
-  {
-    id: "materials-to-chip",
-    from: "materials",
-    to: "ai-chip",
-    kind: "flow",
-    label: "材料输入芯片制造",
-    path: "M 138 158 C 138 208 168 214 168 248",
-  },
-  {
-    id: "materials-to-hbm",
-    from: "materials",
-    to: "hbm-memory",
-    kind: "flow",
-    label: "材料输入 HBM",
-    path: "M 190 144 C 265 178 315 205 315 248",
-  },
-  {
-    id: "materials-to-packaging",
-    from: "materials",
-    to: "advanced-packaging",
-    kind: "flow",
-    label: "封装材料进入先进封装",
-    path: "M 208 122 C 330 122 462 190 462 248",
-  },
-  {
-    id: "materials-to-optical",
-    from: "materials",
-    to: "optical-interconnect",
-    kind: "flow",
-    label: "光材料进入光互联",
-    path: "M 208 98 C 430 82 730 102 762 248",
-  },
-  {
-    id: "chip-to-packaging",
-    from: "ai-chip",
-    to: "advanced-packaging",
-    kind: "flow",
-    label: "AI 芯片进入先进封装",
-    path: "M 222 292 C 285 292 390 292 408 292",
-  },
-  {
-    id: "hbm-to-packaging",
-    from: "hbm-memory",
-    to: "advanced-packaging",
-    kind: "flow",
-    label: "HBM 与 AI 芯片集成",
-    path: "M 369 292 C 388 292 392 292 408 292",
-  },
-  {
-    id: "packaging-to-board",
-    from: "advanced-packaging",
-    to: "board-system",
-    kind: "flow",
-    label: "封装完成进入板级系统",
-    path: "M 516 292 C 535 292 555 292 556 292",
-  },
-  {
-    id: "board-to-server",
-    from: "board-system",
-    to: "server-network",
-    kind: "flow",
-    label: "板级系统进入服务器",
-    path: "M 664 292 C 728 292 812 292 848 292",
-  },
-  {
-    id: "optical-to-server",
-    from: "optical-interconnect",
-    to: "server-network",
-    kind: "flow",
-    label: "光互联接入服务器集群",
-    path: "M 816 292 C 828 292 835 292 848 292",
-  },
-  {
-    id: "server-to-application",
-    from: "server-network",
-    to: "compute-applications",
-    kind: "flow",
-    label: "服务器集群支撑 AI 应用",
-    path: "M 902 336 C 902 372 902 382 902 398",
-  },
-  {
-    id: "equipment-to-chip",
-    from: "equipment",
-    to: "ai-chip",
-    kind: "enable",
-    label: "设备使能芯片制造",
-    path: "M 250 462 C 250 410 168 394 168 336",
-  },
-  {
-    id: "equipment-to-packaging",
-    from: "equipment",
-    to: "advanced-packaging",
-    kind: "enable",
-    label: "设备使能封装测试",
-    path: "M 304 506 C 408 490 462 390 462 336",
-  },
-  {
-    id: "equipment-to-optical",
-    from: "equipment",
-    to: "optical-interconnect",
-    kind: "enable",
-    label: "光耦合 / 测试支撑光互联",
-    path: "M 304 506 C 640 490 762 398 762 336",
-  },
+const mainChainConnectionPaths: Readonly<Record<MainChainConnection["id"], string>> = {
+  "materials-to-ai-chip": "M 138 158 C 138 208 168 214 168 248",
+  "materials-to-hbm": "M 190 144 C 265 178 315 205 315 248",
+  "materials-to-packaging": "M 208 122 C 330 122 462 190 462 248",
+  "materials-to-board": "M 208 134 C 372 162 610 192 610 248",
+  "materials-to-optical": "M 208 98 C 430 82 730 102 762 248",
+  "equipment-to-ai-chip": "M 250 462 C 250 410 168 394 168 336",
+  "equipment-to-hbm": "M 250 462 C 282 418 315 390 315 336",
+  "equipment-to-packaging": "M 304 506 C 408 490 462 390 462 336",
+  "equipment-to-board": "M 304 506 C 510 484 610 390 610 336",
+  "equipment-to-optical": "M 304 506 C 640 490 762 398 762 336",
+  "ai-chip-to-packaging": "M 222 292 C 285 292 390 292 408 292",
+  "hbm-to-packaging": "M 369 292 C 388 292 392 292 408 292",
+  "packaging-to-board": "M 516 292 C 535 292 555 292 556 292",
+  "board-to-server": "M 664 292 C 728 292 812 292 848 292",
+  "optical-to-server": "M 816 292 C 828 292 835 292 848 292",
+  "server-to-apps": "M 902 336 C 902 372 902 382 902 398",
+};
+
+const virtualSwimlaneConnections: readonly SwimlaneConnection[] = [
   {
     id: "software-to-chip",
     from: "software-ip",
     to: "ai-chip",
     kind: "enable",
-    label: "EDA / IP 支撑芯片设计",
+    label: "软件 / IP 工具链 ⇢ AI 芯片",
+    summary: "EDA、IP、编译器和驱动支撑芯片设计、验证与落地。",
     path: "M 520 462 C 410 420 250 390 168 336",
   },
   {
@@ -298,9 +217,26 @@ const swimlaneConnections: readonly SwimlaneConnection[] = [
     from: "software-ip",
     to: "server-network",
     kind: "enable",
-    label: "软件栈管理服务器集群",
+    label: "软件 / IP 工具链 ⇢ 服务器网络",
+    summary: "驱动、调度、网络管理和集群软件把硬件组织成可用算力。",
     path: "M 574 506 C 760 492 902 392 902 336",
   },
+];
+
+function getMainChainConnectionPath(connection: MainChainConnection) {
+  const path = mainChainConnectionPaths[connection.id];
+  if (!path) {
+    throw new Error(`Missing swimlane path for main chain connection: ${connection.id}`);
+  }
+  return path;
+}
+
+const swimlaneConnections: readonly SwimlaneConnection[] = [
+  ...mainChainConnections.map((connection) => ({
+    ...connection,
+    path: getMainChainConnectionPath(connection),
+  })),
+  ...virtualSwimlaneConnections,
 ];
 
 const relationshipTypeLabels: Readonly<
@@ -318,6 +254,11 @@ const stageConnectionKindLabels: Readonly<Record<StageConnectionKind, string>> =
 
 const isStageId = (id: SwimlaneNode["stageId"]): id is AtlasStageId =>
   id !== "software-ip";
+
+const getSwimlaneNodeTitle = (id: SwimlaneNode["stageId"]) => {
+  if (isStageId(id)) return atlasStageById.get(id)?.name ?? id;
+  return swimlaneNodes.find((node) => node.stageId === id)?.title ?? id;
+};
 
 function isConnectionActive(
   connection: SwimlaneConnection,
@@ -598,6 +539,9 @@ function StageInspector({
   related: ReadonlySet<string> | null;
   onSelectNode: (nodeId: string) => void;
 }) {
+  const stageChainConnections = swimlaneConnections.filter(
+    (connection) => connection.from === stage.id || connection.to === stage.id,
+  );
   const realNodes = [
     ...stage.diagram.inputs,
     ...stage.diagram.core,
@@ -626,6 +570,32 @@ function StageInspector({
       </section>
 
       <section>
+        <h3>上下游连接</h3>
+        <ol className="stage-inspector-chain-list">
+          {stageChainConnections.map((connection) => {
+            const isOutgoing = connection.from === stage.id;
+            const connectedStageId = isOutgoing ? connection.to : connection.from;
+            const connectedStageTitle = getSwimlaneNodeTitle(connectedStageId);
+            const badge =
+              connection.kind === "enable" ? "使能" : isOutgoing ? "输出" : "输入";
+            return (
+              <li key={connection.id}>
+                <span data-kind={connection.kind}>{badge}</span>
+                <div>
+                  <strong>{connection.label}</strong>
+                  <small>
+                    {isOutgoing ? "流向" : "来自"}：{connectedStageTitle}
+                    {" · "}
+                    {connection.summary}
+                  </small>
+                </div>
+              </li>
+            );
+          })}
+        </ol>
+      </section>
+
+      <section>
         <h3>输入</h3>
         <ul>
           {stage.diagram.inputs.map((node) => (
@@ -637,7 +607,7 @@ function StageInspector({
       <section>
         <h3>核心流程</h3>
         <ol className="stage-inspector-steps">
-          {stage.internalConnections.slice(0, 5).map((connection, index) => (
+          {stage.internalConnections.map((connection, index) => (
             <li key={connection.id}>
               <span>{index + 1}</span>
               <div>
