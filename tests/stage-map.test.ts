@@ -108,9 +108,7 @@ describe("stage-map", () => {
   });
 
   it("makes duplicate real-node ownership explicit", () => {
-    expect(getStageIdsForNode("hbm")).toEqual(
-      expect.arrayContaining(["hbm-memory", "advanced-packaging"]),
-    );
+    expect(getStageIdsForNode("hbm")).toEqual(["hbm-memory"]);
     expect(getStageIdForNode("hbm")).toBe("hbm-memory");
 
     expect(getStageIdsForNode("low-loss-ccl")).toEqual(

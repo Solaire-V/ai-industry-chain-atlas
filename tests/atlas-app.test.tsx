@@ -120,6 +120,18 @@ describe("AtlasApp", () => {
     ).toBeInTheDocument();
   });
 
+  it("keeps HBM as an upstream input rather than an advanced packaging drill-down node", () => {
+    renderAtlas(new URLSearchParams("layer=interconnect&mode=supply&stage=advanced-packaging"));
+
+    const packagingInspector = screen.getByRole("complementary", {
+      name: "先进封装流程详情",
+    });
+
+    expect(within(packagingInspector).getByText("HBM → 先进封装")).toBeInTheDocument();
+    expect(within(packagingInspector).getByText("HBM")).toBeInTheDocument();
+    expect(within(packagingInspector).queryByTestId("node-hbm")).not.toBeInTheDocument();
+  });
+
   it("keeps material minimum subnodes in the node library instead of the main canvas", () => {
     renderAtlas();
     const canvas = screen.getByRole("region", { name: "产业链泳道画布" });

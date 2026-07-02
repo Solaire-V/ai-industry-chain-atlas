@@ -846,7 +846,7 @@ export const atlasStages: readonly AtlasStage[] = [
     output: "CoWoS、2.5D/3D 封装、封装基板和加速器模组",
     summary: "先进封装是 AI 芯片性能释放的物理互联层，让计算芯片与 HBM 靠近。",
     tone: "packaging",
-    representativeNodeIds: ["hbm"],
+    representativeNodeIds: [],
     diagram: {
       title: "先进封装集成",
       summary: "从 AI 芯片 Die、HBM、Interposer、封装基板和封装材料输入开始，输出加速器模组。",
@@ -862,7 +862,6 @@ export const atlasStages: readonly AtlasStage[] = [
           label: "HBM",
           detail: "来自 HBM 存储阶段的高带宽内存。",
           kind: "component",
-          realNodeId: "hbm",
         },
         {
           id: "packaging-material-input",
@@ -913,7 +912,7 @@ export const atlasStages: readonly AtlasStage[] = [
         summary: "计算芯片、HBM 和封装材料共同进入先进封装。",
         nodes: [
           { id: "ai-die", label: "AI Die", description: "计算芯片裸片。", kind: "component" },
-          { id: "hbm-package-input", label: "HBM", description: "靠近计算芯片的高带宽内存。", kind: "component", realNodeId: "hbm" },
+          { id: "hbm-package-input", label: "HBM", description: "靠近计算芯片的高带宽内存。", kind: "component" },
           { id: "underfill-emc-tim", label: "Underfill / EMC / TIM", description: "底填、塑封和导热材料。", kind: "material" },
         ],
       },
