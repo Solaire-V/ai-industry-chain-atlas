@@ -652,9 +652,10 @@ function StageInspector({
                     <li key={connection.id} data-kind={connection.kind}>
                       <strong>{connection.label}</strong>
                       <small>
-                        {isOutgoing ? "流向" : "来自"}：{connectedStageTitle}
-                        {" · "}
-                        {connection.summary}
+                        <span>
+                          {isOutgoing ? "流向" : "来自"}：{connectedStageTitle}
+                        </span>
+                        <span>{connection.summary}</span>
                       </small>
                     </li>
                   );
