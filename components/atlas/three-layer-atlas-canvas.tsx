@@ -80,7 +80,7 @@ const workspaceViews: readonly {
   description: string;
 }[] = [
   { id: "canvas", title: "主界面", description: "产业链全景画布" },
-  { id: "nodes", title: "节点库", description: "细分节点" },
+  { id: "nodes", title: "节点库", description: "节点研究" },
   { id: "companies", title: "公司库", description: "公司与业务" },
   { id: "markets", title: "行情数据", description: "股价 / PE / 市值" },
   { id: "supply", title: "供需关系", description: "供应与客户" },
@@ -734,7 +734,7 @@ function StageInspector({
           <div className="stage-inspector-section-heading">
             <div>
               <h3>继续查看</h3>
-              <small>点击进入细分节点、公司与证据</small>
+              <small>点击查看节点、公司与证据</small>
             </div>
           </div>
           <div className="stage-inspector-node-list">
@@ -802,6 +802,8 @@ const getCompanyTickerLabel = (company: AtlasCompany | undefined) => {
     ? `${company.ticker} · ${company.exchange}`
     : company.ticker;
 };
+
+const NODE_COMPANY_PREVIEW_LIMIT = 4;
 
 interface RealNodeStageAppearance {
   stageId: AtlasStageId;
@@ -940,16 +942,6 @@ function NodeLibraryPanel({
   ) =>
     coveragesBySubnode.get(getSubnodeCoverageKey(stageId, groupId, subnodeId)) ??
     [];
-  const getStageCoverageStats = (stage: AtlasStage) => {
-    const items = getNodeLibraryItems(stage, nodeById);
-    const coverageCounts = items.map((item) =>
-      getCoveragesForSubnode(item.stage.id, item.group.id, item.node.id).length,
-    );
-    return {
-      coveredSubnodeCount: coverageCounts.filter((count) => count > 0).length,
-      companyCoverageCount: coverageCounts.reduce((total, count) => total + count, 0),
-    };
-  };
   const selectedCoverages = selectedItem
     ? getCoveragesForSubnode(
         selectedItem.stage.id,
@@ -982,56 +974,13 @@ function NodeLibraryPanel({
       }
       return left.coverage.rank - right.coverage.rank;
     });
-  const selectedCoverageStats = getStageCoverageStats(selectedStage);
-  const selectedStageStats = {
-    groupCount: selectedStage.groups.length,
-    nodeCount: stageItems.length,
-    mappedCount: stageItems.filter((item) => item.realNode).length,
-    coveredSubnodeCount: selectedCoverageStats.coveredSubnodeCount,
-    companyCoverageCount: selectedCoverageStats.companyCoverageCount,
-  };
 
   return (
     <section className="workspace-data-panel node-library-panel" aria-label="节点库">
       <header className="node-library-header">
         <div>
           <h1>节点库</h1>
-          <p>
-            细分节点索引与主界面 9 个模块共用同一份 stageId / nodeId；
-            概念节点用于理解流程，可投资节点显示技术资料与代表公司覆盖。
-          </p>
-        </div>
-        <div className="node-library-summary" aria-label="节点库统计">
-          <span>
-            <strong>{atlasStages.length}</strong>
-            主链模块
-          </span>
-          <span>
-            <strong>
-              {atlasStages.reduce(
-                (total, stage) =>
-                  total +
-                  stage.groups.reduce((count, group) => count + group.nodes.length, 0),
-                0,
-              )}
-            </strong>
-            细分节点
-          </span>
-          <span>
-            <strong>
-              {atlasStages.reduce(
-                (total, stage) =>
-                  total +
-                  getStageCoverageStats(stage).coveredSubnodeCount,
-                0,
-              )}
-            </strong>
-            已覆盖子节点
-          </span>
-          <span>
-            <strong>{subnodeCompanyCoverages.length}</strong>
-            公司映射
-          </span>
+          <p>按产业链环节查看关键节点与代表公司。</p>
         </div>
       </header>
 
@@ -1039,7 +988,6 @@ function NodeLibraryPanel({
         <aside className="node-library-stage-nav" aria-label="节点库阶段导航">
           {atlasStages.map((stage) => {
             const items = getNodeLibraryItems(stage, nodeById);
-            const coverageStats = getStageCoverageStats(stage);
             return (
               <button
                 key={stage.id}
@@ -1050,18 +998,13 @@ function NodeLibraryPanel({
               >
                 <span>{String(stage.order).padStart(2, "0")}</span>
                 <strong>{stage.name}</strong>
-                <small>
-                  {items.length} 个节点 ·{" "}
-                  {coverageStats.coveredSubnodeCount > 0
-                    ? `${coverageStats.coveredSubnodeCount} 个已覆盖`
-                    : "待补公司覆盖"}
-                </small>
+                <small>{items.length} 节点</small>
               </button>
             );
           })}
         </aside>
 
-        <main className="node-library-browser" aria-label={`${selectedStage.name}细分节点`}>
+        <main className="node-library-browser" aria-label={`${selectedStage.name}节点清单`}>
           <section className="node-library-stage-overview">
             <div>
               <small>{stageLaneLabels[selectedStage.id]}</small>
@@ -1076,35 +1019,11 @@ function NodeLibraryPanel({
             </button>
           </section>
 
-          <div className="node-library-stage-metrics" aria-label="当前阶段节点统计">
-            <span>
-              <strong>{selectedStageStats.groupCount}</strong>
-              二级分类
-            </span>
-            <span>
-              <strong>{selectedStageStats.nodeCount}</strong>
-              细分节点
-            </span>
-            <span>
-              <strong>{selectedStageStats.mappedCount}</strong>
-              已绑定真实节点
-            </span>
-            <span>
-              <strong>{selectedStageStats.coveredSubnodeCount}</strong>
-              已覆盖节点
-            </span>
-            <span>
-              <strong>{selectedStageStats.companyCoverageCount}</strong>
-              公司映射
-            </span>
-          </div>
-
           <div className="node-library-groups">
             {selectedStage.groups.map((group) => (
               <article key={group.id} className="node-library-group">
                 <header>
                   <h3>{group.title}</h3>
-                  <p>{group.summary}</p>
                 </header>
                 <div className="node-library-node-grid">
                   {group.nodes.map((node) => {
@@ -1121,9 +1040,14 @@ function NodeLibraryPanel({
                       group.id,
                       node.id,
                     );
-                    const topCoverageCompany = coverages[0]
-                      ? companyById.get(coverages[0].companyId)
-                      : undefined;
+                    const previewCompanies = coverages
+                      .slice(0, NODE_COMPANY_PREVIEW_LIMIT)
+                      .map((coverage) => companyById.get(coverage.companyId)?.name)
+                      .filter((name): name is string => Boolean(name));
+                    const remainingCompanyCount = Math.max(
+                      coverages.length - previewCompanies.length,
+                      0,
+                    );
                     return (
                       <button
                         key={key}
@@ -1135,20 +1059,23 @@ function NodeLibraryPanel({
                         data-testid={`library-node-${node.id}`}
                         onClick={() => setSelectedItemKey(key)}
                       >
-                        <span>{stageSubnodeKindLabels[node.kind]}</span>
-                        <strong>{node.label}</strong>
-                        <small>
-                          {coverages.length
-                            ? `${coverages.length} 家覆盖`
-                            : realNode
-                              ? "可投资节点"
-                              : "概念节点"}
-                        </small>
-                        {topCoverageCompany ? (
-                          <em className="node-library-node-badge node-library-node-badge-company">
-                            {topCoverageCompany.name}
-                          </em>
-                        ) : null}
+                        <header>
+                          <span>{stageSubnodeKindLabels[node.kind]}</span>
+                          <strong>{node.label}</strong>
+                          {coverages.length ? <small>{coverages.length} 公司</small> : null}
+                        </header>
+                        {previewCompanies.length ? (
+                          <div className="node-library-company-preview">
+                            {previewCompanies.map((name) => (
+                              <em key={name}>{name}</em>
+                            ))}
+                            {remainingCompanyCount > 0 ? (
+                              <em>+{remainingCompanyCount}</em>
+                            ) : null}
+                          </div>
+                        ) : (
+                          <small>{realNode ? "可投" : "概念"}</small>
+                        )}
                         {crossStage ? (
                           <em className="node-library-node-badge">跨阶段</em>
                         ) : null}
@@ -1167,27 +1094,23 @@ function NodeLibraryPanel({
               <header>
                 <span>{stageSubnodeKindLabels[selectedItem.node.kind]}</span>
                 <h2>{selectedItem.node.label}</h2>
-                <small>
-                  {selectedRealNode ? "可投资节点" : "概念节点"} · 对齐主界面：
-                  {selectedItem.stage.name}
-                </small>
               </header>
               <section>
                 <h3>节点说明</h3>
                 <p>{selectedItem.node.description}</p>
               </section>
               <section>
-                <h3>主界面对齐</h3>
+                <h3>产业位置</h3>
                 <dl className="node-library-definition-list">
                   <div>
-                    <dt>主链模块</dt>
+                    <dt>环节</dt>
                     <dd>
                       {String(selectedItem.stage.order).padStart(2, "0")} ·{" "}
                       {selectedItem.stage.name}
                     </dd>
                   </div>
                   <div>
-                    <dt>二级分类</dt>
+                    <dt>分类</dt>
                     <dd>{selectedItem.group.title}</dd>
                   </div>
                   <div>
@@ -1204,7 +1127,7 @@ function NodeLibraryPanel({
                 <section>
                   <h3>跨阶段复用</h3>
                   <p>
-                    同一个真实节点在多个主链模块承担不同角色，属于复用关系，不是重复数据。
+                    同一个真实节点在多个产业环节承担不同角色，属于复用关系，不是重复数据。
                   </p>
                   <ul className="node-library-reuse-list">
                     {selectedRealNodeAppearances.map((appearance) => (
@@ -1272,11 +1195,8 @@ function NodeLibraryPanel({
                 </>
               ) : (
                 <section>
-                  <h3>数据状态</h3>
-                  <p>
-                    当前是流程概念节点，已对齐主界面模块；后续补公司、行情或供需证据后，
-                    可以升级为可投资节点。
-                  </p>
+                  <h3>研究状态</h3>
+                  <p>当前用于理解流程位置，待补代表公司后进入投资跟踪。</p>
                 </section>
               )}
             </>

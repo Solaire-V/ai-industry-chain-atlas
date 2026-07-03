@@ -3176,48 +3176,27 @@ body {
 
 .node-library-panel {
   display: grid;
-  gap: 18px;
+  gap: 10px;
 }
 
 .node-library-header {
   display: flex;
   max-width: none;
-  align-items: flex-end;
+  align-items: center;
   justify-content: space-between;
-  gap: 18px;
+  gap: 12px;
 }
 
-.node-library-summary {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(96px, 1fr));
-  gap: 8px;
-  min-width: 360px;
-}
-
-.node-library-summary span,
-.node-library-stage-metrics span {
-  display: grid;
-  gap: 2px;
-  padding: 10px 12px;
+.node-library-header p {
+  margin: 2px 0 0;
   color: var(--atlas-muted);
-  font-size: 11px;
-  font-weight: 780;
-  border: 1px solid var(--atlas-border);
-  border-radius: 14px;
-  background: #fff;
-}
-
-.node-library-summary strong,
-.node-library-stage-metrics strong {
-  color: var(--atlas-text);
-  font-size: 20px;
-  font-weight: 950;
-  line-height: 1;
+  font-size: 12px;
+  line-height: 1.4;
 }
 
 .node-library-layout {
   display: grid;
-  grid-template-columns: 230px minmax(430px, 1fr) 340px;
+  grid-template-columns: 190px minmax(500px, 1fr) 340px;
   gap: 14px;
   align-items: flex-start;
 }
@@ -3241,13 +3220,13 @@ body {
 
 .node-library-stage-nav button {
   display: grid;
-  grid-template-columns: 30px minmax(0, 1fr);
-  gap: 2px 9px;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 1px 8px;
   width: 100%;
-  padding: 10px;
+  padding: 8px;
   text-align: left;
   border: 1px solid transparent;
-  border-radius: 14px;
+  border-radius: 12px;
   background: transparent;
 }
 
@@ -3259,8 +3238,8 @@ body {
 .node-library-stage-nav span {
   grid-row: span 2;
   display: grid;
-  width: 30px;
-  height: 30px;
+  width: 28px;
+  height: 28px;
   place-items: center;
   color: var(--atlas-blue);
   font-size: 11px;
@@ -3271,29 +3250,30 @@ body {
 
 .node-library-stage-nav strong {
   color: var(--atlas-text);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 900;
 }
 
 .node-library-stage-nav small {
   color: var(--atlas-muted);
-  font-size: 11px;
+  font-size: 10px;
+  font-weight: 780;
 }
 
 .node-library-browser {
   display: grid;
-  gap: 14px;
-  padding: 16px;
+  gap: 10px;
+  padding: 12px;
 }
 
 .node-library-stage-overview {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 14px;
-  padding: 14px;
+  gap: 10px;
+  padding: 10px 12px;
   border: 1px solid var(--atlas-border);
-  border-radius: 17px;
+  border-radius: 15px;
   background: var(--atlas-surface-soft);
 }
 
@@ -3307,7 +3287,7 @@ body {
 .node-library-detail h2 {
   margin: 2px 0 0;
   color: var(--atlas-text);
-  font-size: 24px;
+  font-size: 22px;
   font-weight: 950;
   letter-spacing: -0.05em;
 }
@@ -3323,9 +3303,9 @@ body {
 
 .node-library-stage-overview button {
   flex: 0 0 auto;
-  padding: 9px 12px;
+  padding: 7px 10px;
   color: #fff;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 900;
   border: 0;
   border-radius: 999px;
@@ -3333,23 +3313,17 @@ body {
   box-shadow: 0 12px 24px rgba(37, 99, 235, 0.18);
 }
 
-.node-library-stage-metrics {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
-}
-
 .node-library-groups {
   display: grid;
-  gap: 12px;
+  gap: 10px;
 }
 
 .node-library-group {
   display: grid;
-  gap: 10px;
-  padding: 13px;
+  gap: 8px;
+  padding: 10px;
   border: 1px solid var(--atlas-border);
-  border-radius: 17px;
+  border-radius: 15px;
   background: #fff;
 }
 
@@ -3364,18 +3338,36 @@ body {
 .node-library-node-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
+  gap: 7px;
 }
 
 .node-library-node-grid button {
   display: grid;
-  gap: 4px;
-  min-height: 86px;
-  padding: 10px;
+  gap: 6px;
+  min-height: 78px;
+  padding: 9px;
   text-align: left;
   border: 1px solid var(--atlas-border);
-  border-radius: 14px;
+  border-radius: 13px;
   background: var(--atlas-surface-soft);
+}
+
+.node-library-node-grid button > header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+}
+
+.node-library-node-grid button > header small {
+  margin-left: auto;
+  padding: 2px 6px;
+  color: #047857;
+  font-size: 10px;
+  font-weight: 900;
+  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.1);
 }
 
 .node-library-node-grid button[data-selected="true"] {
@@ -3407,6 +3399,28 @@ body {
   font-size: 13px;
   font-weight: 900;
   line-height: 1.25;
+}
+
+.node-library-company-preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.node-library-company-preview em {
+  width: fit-content;
+  max-width: 100%;
+  padding: 3px 6px;
+  overflow: hidden;
+  color: #047857;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.1);
 }
 
 .node-library-node-grid small,
@@ -3487,6 +3501,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 10px;
 }
 
@@ -3494,6 +3509,7 @@ body {
   display: flex;
   flex-wrap: wrap;
   gap: 5px;
+  min-width: 0;
 }
 
 .node-library-market-tabs button {

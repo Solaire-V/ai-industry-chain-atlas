@@ -166,7 +166,7 @@ describe("AtlasApp", () => {
     const stageNav = screen.getByLabelText("节点库阶段导航");
     fireEvent.click(within(stageNav).getByRole("button", { name: /05.*先进封装/ }));
 
-    expect(screen.getByRole("main", { name: "先进封装细分节点" })).toBeInTheDocument();
+    expect(screen.getByRole("main", { name: "先进封装节点清单" })).toBeInTheDocument();
     expect(screen.getByText("Silicon Interposer")).toBeInTheDocument();
     expect(screen.getByText("CoWoS")).toBeInTheDocument();
     expect(screen.getByText("封装基板")).toBeInTheDocument();
@@ -186,7 +186,7 @@ describe("AtlasApp", () => {
     );
 
     expect(screen.getByRole("heading", { name: "节点库" })).toBeInTheDocument();
-    expect(screen.getByRole("main", { name: "设备细分节点" })).toBeInTheDocument();
+    expect(screen.getByRole("main", { name: "设备节点清单" })).toBeInTheDocument();
     expect(screen.queryByRole("region", { name: "产业链泳道画布" })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /行情数据/ }));
@@ -202,16 +202,39 @@ describe("AtlasApp", () => {
       new URLSearchParams("view=nodes&layer=interconnect&mode=supply&stage=equipment"),
     );
 
-    const equipmentBrowser = screen.getByRole("main", { name: "设备细分节点" });
+    const equipmentBrowser = screen.getByRole("main", { name: "设备节点清单" });
     const highSpeedTestingCards = within(equipmentBrowser)
       .getAllByRole("button")
       .filter((button) => button.textContent?.includes("高速测试"))
       .map((button) => button.textContent?.replace(/\s+/g, ""));
 
     expect(highSpeedTestingCards).toEqual([
-      "设备芯片/器件高速测试3家覆盖爱德万测试",
-      "设备光模块/CPO高速测试4家覆盖是德科技",
+      "设备芯片/器件高速测试3公司爱德万测试泰瑞达是德科技",
+      "设备光模块/CPO高速测试4公司是德科技致茂电子泰瑞达博杰股份",
     ]);
+  });
+
+  it("shows compact company previews in node cards without misleading single-company badges", () => {
+    renderAtlas(
+      new URLSearchParams("view=nodes&layer=interconnect&mode=supply&stage=materials"),
+    );
+
+    const siliconCard = screen.getByTestId("library-node-silicon-wafer");
+    expect(within(siliconCard).getByText("3 公司")).toBeInTheDocument();
+    expect(within(siliconCard).getByText("沪硅产业")).toBeInTheDocument();
+    expect(within(siliconCard).getByText("TCL 中环")).toBeInTheDocument();
+    expect(within(siliconCard).getByText("立昂微")).toBeInTheDocument();
+    expect(within(siliconCard).queryByText("3 家覆盖")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /板级系统/ }));
+    const pcbCard = screen.getByTestId("library-node-high-layer-pcb-node");
+    expect(within(pcbCard).getByText("7 公司")).toBeInTheDocument();
+    expect(within(pcbCard).getByText("胜宏科技")).toBeInTheDocument();
+    expect(within(pcbCard).getByText("沪电股份")).toBeInTheDocument();
+    expect(within(pcbCard).getByText("深南电路")).toBeInTheDocument();
+    expect(within(pcbCard).getByText("东山精密")).toBeInTheDocument();
+    expect(within(pcbCard).getByText("+3")).toBeInTheDocument();
+    expect(within(pcbCard).queryByText("7 家覆盖")).not.toBeInTheDocument();
   });
 
   it("marks reused real nodes with their cross-stage positions", () => {
@@ -230,18 +253,19 @@ describe("AtlasApp", () => {
     expect(within(detail).getByText("板级系统 / 高速板级互联")).toBeInTheDocument();
   });
 
-  it("shows node-library data completeness instead of ambiguous zero counts", () => {
+  it("keeps node-library chrome focused on investment research instead of engineering stats", () => {
     renderAtlas(
       new URLSearchParams("view=nodes&layer=interconnect&mode=supply&stage=equipment"),
     );
 
     const stageNav = screen.getByLabelText("节点库阶段导航");
-    expect(
-      within(stageNav).getByRole("button", { name: /02.*设备.*28 个节点.*28 个已覆盖/ }),
-    ).toBeInTheDocument();
-    expect(screen.getByText("已覆盖节点")).toBeInTheDocument();
-    expect(screen.getAllByText("公司映射").length).toBeGreaterThanOrEqual(2);
-    expect(screen.getAllByText("28").length).toBeGreaterThanOrEqual(2);
+    expect(within(stageNav).getByRole("button", { name: /02.*设备.*28 节点/ })).toBeInTheDocument();
+    expect(within(stageNav).queryByText(/已覆盖/)).not.toBeInTheDocument();
+    expect(screen.queryByText("主链模块")).not.toBeInTheDocument();
+    expect(screen.queryByText("二级分类")).not.toBeInTheDocument();
+    expect(screen.queryByText("细分节点")).not.toBeInTheDocument();
+    expect(screen.queryByText("已覆盖节点")).not.toBeInTheDocument();
+    expect(screen.queryByText("公司映射")).not.toBeInTheDocument();
   });
 
   it("shows subnode company coverage in the node library", () => {
@@ -271,7 +295,7 @@ describe("AtlasApp", () => {
     );
 
     const laserCard = screen.getByTestId("library-node-laser-node");
-    expect(within(laserCard).getByText("1 家覆盖")).toBeInTheDocument();
+    expect(within(laserCard).getByText("1 公司")).toBeInTheDocument();
 
     fireEvent.click(laserCard);
 
