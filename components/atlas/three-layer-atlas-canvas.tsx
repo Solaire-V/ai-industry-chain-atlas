@@ -7,6 +7,7 @@ import type {
   AtlasIndustryEdge,
   AtlasNode,
 } from "@/lib/atlas/schema";
+import type { AtlasWorkspaceView } from "@/lib/atlas/query-state";
 import {
   atlasStageById,
   atlasStages,
@@ -27,22 +28,19 @@ interface ThreeLayerAtlasCanvasProps {
   nodes: readonly AtlasNode[];
   companies: readonly AtlasCompany[];
   edges: readonly AtlasIndustryEdge[];
+  activeView: AtlasWorkspaceView;
   selectedStageId: AtlasStageId;
   selectedNodeId: string | null;
   search: string;
   empty: boolean;
+  onChangeView: (view: AtlasWorkspaceView) => void;
   onSelectStage: (stageId: AtlasStageId) => void;
+  onOpenStageInCanvas: (stageId: AtlasStageId) => void;
   onSelectNode: (nodeId: string) => void;
   onResetSearch: () => void;
 }
 
-type WorkspaceView =
-  | "canvas"
-  | "nodes"
-  | "companies"
-  | "markets"
-  | "supply"
-  | "settings";
+type WorkspaceView = AtlasWorkspaceView;
 
 type SwimlaneId = "upstream" | "midstream" | "downstream" | "support";
 
@@ -1182,15 +1180,17 @@ export function ThreeLayerAtlasCanvas({
   nodes,
   companies,
   edges,
+  activeView,
   selectedStageId,
   selectedNodeId,
   search,
   empty,
+  onChangeView,
   onSelectStage,
+  onOpenStageInCanvas,
   onSelectNode,
   onResetSearch,
 }: ThreeLayerAtlasCanvasProps) {
-  const [activeView, setActiveView] = useState<WorkspaceView>("canvas");
   const nodeById = useMemo(
     () => new Map(nodes.map((node) => [node.id, node])),
     [nodes],
@@ -1234,7 +1234,7 @@ export function ThreeLayerAtlasCanvas({
       className="atlas-workbench"
       aria-label="AI 产业链图谱工作台"
     >
-      <CanvasNavigation activeView={activeView} onChangeView={setActiveView} />
+      <CanvasNavigation activeView={activeView} onChangeView={onChangeView} />
 
       {empty || !stage ? (
         <div className="atlas-workbench-main">
@@ -1286,8 +1286,7 @@ export function ThreeLayerAtlasCanvas({
               onSelectStage(stageId);
             }}
             onOpenStageInCanvas={(stageId) => {
-              setActiveView("canvas");
-              onSelectStage(stageId);
+              onOpenStageInCanvas(stageId);
             }}
             onSelectNode={onSelectNode}
           />

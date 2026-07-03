@@ -11,6 +11,7 @@ describe("parseAtlasQuery", () => {
     expect(parseAtlasQuery(new URLSearchParams())).toMatchObject({
       layer: "interconnect",
       mode: "supply",
+      view: "canvas",
       stage: "optical-interconnect",
       node: null,
       company: null,
@@ -19,7 +20,7 @@ describe("parseAtlasQuery", () => {
   });
 
   it("uses safe defaults for unknown layer and mode values", () => {
-    const params = new URLSearchParams("layer=unknown&mode=sideways");
+    const params = new URLSearchParams("view=unknown&layer=unknown&mode=sideways");
 
     expect(parseAtlasQuery(params)).toEqual(DEFAULT_ATLAS_QUERY);
   });
@@ -28,6 +29,7 @@ describe("parseAtlasQuery", () => {
     const state = {
       layer: "chips",
       mode: "all",
+      view: "nodes",
       stage: "optical-interconnect",
       node: "gpu-accelerators",
       company: "nvidia",
@@ -45,9 +47,15 @@ describe("parseAtlasQuery", () => {
     } as const;
 
     expect(serializeAtlasQuery(state).toString()).toBe(
-      "layer=interconnect&mode=supply&stage=materials&q=%E5%85%89%E5%88%BB%E8%83%B6",
+      "view=canvas&layer=interconnect&mode=supply&stage=materials&q=%E5%85%89%E5%88%BB%E8%83%B6",
     );
     expect(parseAtlasQuery(serializeAtlasQuery(state))).toEqual(state);
+  });
+
+  it("normalizes unknown view values to the default canvas view", () => {
+    expect(parseAtlasQuery(new URLSearchParams("view=missing"))).toMatchObject({
+      view: "canvas",
+    });
   });
 
   it("normalizes unknown stage values to the default stage", () => {
@@ -79,6 +87,7 @@ describe("parseAtlasQuery", () => {
     expect(parseAtlasQuery(serializeAtlasQuery(parsed))).toEqual({
       layer: "applications",
       mode: "supply",
+      view: "canvas",
       stage: "optical-interconnect",
       node: null,
       company: "寒武纪",
@@ -137,15 +146,16 @@ describe("serializeAtlasQuery", () => {
     });
 
     expect(params.toString()).toBe(
-      "layer=interconnect&mode=supply&stage=optical-interconnect",
+      "view=canvas&layer=interconnect&mode=supply&stage=optical-interconnect",
     );
-    expect([...params.keys()]).toEqual(["layer", "mode", "stage"]);
+    expect([...params.keys()]).toEqual(["view", "layer", "mode", "stage"]);
   });
 
   it("normalizes optional values using the parser limits", () => {
     const params = serializeAtlasQuery({
       layer: "materials",
       mode: "value",
+      view: "supply",
       stage: "optical-interconnect",
       node: ` ${"n".repeat(101)} `,
       company: ` ${"c".repeat(101)} `,
@@ -153,6 +163,7 @@ describe("serializeAtlasQuery", () => {
     });
 
     expect([...params.keys()]).toEqual([
+      "view",
       "layer",
       "mode",
       "stage",
@@ -173,18 +184,19 @@ describe("serializeAtlasQuery", () => {
     } as unknown as Parameters<typeof serializeAtlasQuery>[0]);
 
     expect(params.toString()).toBe(
-      "layer=interconnect&mode=supply&stage=optical-interconnect",
+      "view=canvas&layer=interconnect&mode=supply&stage=optical-interconnect",
     );
   });
 
-  it("canonicalizes invalid runtime stage values to the default stage", () => {
+  it("canonicalizes invalid runtime stage and view values to defaults", () => {
     const params = serializeAtlasQuery({
       ...DEFAULT_ATLAS_QUERY,
+      view: "invalid-view",
       stage: "invalid-stage",
     } as unknown as Parameters<typeof serializeAtlasQuery>[0]);
 
     expect(params.toString()).toBe(
-      "layer=interconnect&mode=supply&stage=optical-interconnect",
+      "view=canvas&layer=interconnect&mode=supply&stage=optical-interconnect",
     );
   });
 });

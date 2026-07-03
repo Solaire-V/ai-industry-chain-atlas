@@ -94,6 +94,16 @@ describe("stage-map", () => {
     );
   });
 
+  it("keeps displayed subnode labels unique within each stage", () => {
+    for (const stage of atlasStages) {
+      const labels = stage.groups.flatMap((group) =>
+        group.nodes.map((node) => node.label),
+      );
+
+      expect(new Set(labels).size, stage.name).toBe(labels.length);
+    }
+  });
+
   it("maps real atlas nodes to their stage", () => {
     expect(getStageIdForNode("cpo")).toBe("optical-interconnect");
     expect(getStageIdForNode("optical-engine")).toBe("optical-interconnect");

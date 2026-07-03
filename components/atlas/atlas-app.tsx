@@ -11,6 +11,7 @@ import {
   parseAtlasQuery,
   serializeAtlasQuery,
   type AtlasQueryState,
+  type AtlasWorkspaceView,
 } from "@/lib/atlas/query-state";
 import type { AtlasSnapshot } from "@/lib/atlas/schema";
 import {
@@ -237,13 +238,22 @@ export function AtlasApp({
         nodes={posterNodes}
         companies={initialSnapshot.companies}
         edges={initialSnapshot.industryEdges}
+        activeView={query.view}
         selectedStageId={selectedStageId}
         selectedNodeId={selectedNode?.id ?? null}
         search={normalizedSearch}
         empty={posterNodes.length === 0 && !searchStage}
+        onChangeView={(view: AtlasWorkspaceView) => {
+          setFocusAnchorNodeId(null);
+          updateQuery({ view, node: null, company: null });
+        }}
         onSelectStage={(stage) => {
           setFocusAnchorNodeId(null);
           updateQuery({ stage, node: null, company: null }, "replace");
+        }}
+        onOpenStageInCanvas={(stage) => {
+          setFocusAnchorNodeId(null);
+          updateQuery({ view: "canvas", stage, node: null, company: null });
         }}
         onSelectNode={(node) => {
           setFocusAnchorNodeId(null);

@@ -10,8 +10,16 @@ import {
 } from "@/lib/atlas/stage-map";
 
 export type AtlasQueryMode = RelationshipMode;
+export type AtlasWorkspaceView =
+  | "canvas"
+  | "nodes"
+  | "companies"
+  | "markets"
+  | "supply"
+  | "settings";
 
 export interface AtlasQueryState {
+  view: AtlasWorkspaceView;
   layer: AtlasNode["layer"];
   mode: AtlasQueryMode;
   stage: AtlasStageId;
@@ -21,6 +29,7 @@ export interface AtlasQueryState {
 }
 
 export const DEFAULT_ATLAS_QUERY: Readonly<AtlasQueryState> = Object.freeze({
+  view: "canvas",
   layer: "interconnect",
   mode: "supply",
   stage: defaultStageId,
@@ -47,6 +56,20 @@ const normalizeLayer = (value: string | null): AtlasQueryState["layer"] => {
 const normalizeMode = (value: string | null): AtlasQueryMode =>
   isRelationshipMode(value) ? value : DEFAULT_ATLAS_QUERY.mode;
 
+const workspaceViews = new Set<AtlasWorkspaceView>([
+  "canvas",
+  "nodes",
+  "companies",
+  "markets",
+  "supply",
+  "settings",
+]);
+
+const normalizeView = (value: string | null): AtlasWorkspaceView =>
+  value && workspaceViews.has(value as AtlasWorkspaceView)
+    ? (value as AtlasWorkspaceView)
+    : DEFAULT_ATLAS_QUERY.view;
+
 const normalizeStage = (value: string | null): AtlasStageId =>
   value && atlasStageById.has(value as AtlasStageId)
     ? (value as AtlasStageId)
@@ -55,6 +78,7 @@ const normalizeStage = (value: string | null): AtlasStageId =>
 export const parseAtlasQuery = (
   params: SearchParamsReader,
 ): AtlasQueryState => ({
+  view: normalizeView(params.get("view")),
   layer: normalizeLayer(params.get("layer")),
   mode: normalizeMode(params.get("mode")),
   stage: normalizeStage(params.get("stage")),
@@ -69,6 +93,7 @@ export const serializeAtlasQuery = (state: AtlasQueryState) => {
   const company = normalizeOptionalText(state.company, 100);
   const search = normalizeText(state.search, 80);
 
+  params.set("view", normalizeView(state.view));
   params.set("layer", normalizeLayer(state.layer));
   params.set("mode", normalizeMode(state.mode));
   params.set("stage", normalizeStage(state.stage));

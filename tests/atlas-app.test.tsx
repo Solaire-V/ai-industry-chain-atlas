@@ -180,6 +180,40 @@ describe("AtlasApp", () => {
     );
   });
 
+  it("opens the node library from the view query and writes directory navigation to the URL", () => {
+    const { push } = renderAtlas(
+      new URLSearchParams("view=nodes&layer=interconnect&mode=supply&stage=equipment"),
+    );
+
+    expect(screen.getByRole("heading", { name: "节点库" })).toBeInTheDocument();
+    expect(screen.getByRole("main", { name: "设备细分节点" })).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "产业链泳道画布" })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /行情数据/ }));
+
+    expect(screen.getByRole("heading", { name: "行情数据" })).toBeInTheDocument();
+    expect(push).toHaveBeenLastCalledWith(
+      "?view=markets&layer=interconnect&mode=supply&stage=equipment",
+    );
+  });
+
+  it("disambiguates equipment high-speed testing nodes in the node library", () => {
+    renderAtlas(
+      new URLSearchParams("view=nodes&layer=interconnect&mode=supply&stage=equipment"),
+    );
+
+    const equipmentBrowser = screen.getByRole("main", { name: "设备细分节点" });
+    const highSpeedTestingCards = within(equipmentBrowser)
+      .getAllByRole("button")
+      .filter((button) => button.textContent?.includes("高速测试"))
+      .map((button) => button.textContent?.replace(/\s+/g, ""));
+
+    expect(highSpeedTestingCards).toEqual([
+      "设备芯片/器件高速测试概念节点",
+      "设备光模块/CPO高速测试概念节点",
+    ]);
+  });
+
   it("opens investable node details from the node library while leaving concept nodes local", () => {
     renderAtlas(new URLSearchParams("layer=interconnect&mode=supply&stage=optical-interconnect"));
 
@@ -295,7 +329,7 @@ describe("AtlasApp", () => {
     expect(replace).not.toHaveBeenCalled();
     act(() => vi.advanceTimersByTime(200));
     expect(replace).toHaveBeenLastCalledWith(
-      "?layer=interconnect&mode=supply&stage=optical-interconnect&q=silicon+photonics",
+      "?view=canvas&layer=interconnect&mode=supply&stage=optical-interconnect&q=silicon+photonics",
     );
   });
 
@@ -318,7 +352,7 @@ describe("AtlasApp", () => {
 
     act(() => vi.advanceTimersByTime(200));
     expect(replace).toHaveBeenLastCalledWith(
-      "?layer=interconnect&mode=supply&stage=materials&q=%E5%85%89%E5%88%BB%E8%83%B6",
+      "?view=canvas&layer=interconnect&mode=supply&stage=materials&q=%E5%85%89%E5%88%BB%E8%83%B6",
     );
   });
 
@@ -333,11 +367,11 @@ describe("AtlasApp", () => {
     fireEvent.blur(search);
 
     expect(replace).toHaveBeenLastCalledWith(
-      "?layer=interconnect&mode=supply&stage=materials&q=%E5%85%89%E5%88%BB%E8%83%B6",
+      "?view=canvas&layer=interconnect&mode=supply&stage=materials&q=%E5%85%89%E5%88%BB%E8%83%B6",
     );
     act(() => vi.advanceTimersByTime(200));
     expect(replace).toHaveBeenLastCalledWith(
-      "?layer=interconnect&mode=supply&stage=materials&q=%E5%85%89%E5%88%BB%E8%83%B6",
+      "?view=canvas&layer=interconnect&mode=supply&stage=materials&q=%E5%85%89%E5%88%BB%E8%83%B6",
     );
   });
 
@@ -354,7 +388,7 @@ describe("AtlasApp", () => {
     act(() => vi.advanceTimersByTime(200));
 
     expect(replace).toHaveBeenLastCalledWith(
-      "?layer=interconnect&mode=supply&stage=server-network&q=silicon+photonics",
+      "?view=canvas&layer=interconnect&mode=supply&stage=server-network&q=silicon+photonics",
     );
   });
 
@@ -377,7 +411,7 @@ describe("AtlasApp", () => {
 
     act(() => vi.advanceTimersByTime(200));
     expect(replace).toHaveBeenLastCalledWith(
-      "?layer=interconnect&mode=supply&stage=hbm-memory&q=HBM",
+      "?view=canvas&layer=interconnect&mode=supply&stage=hbm-memory&q=HBM",
     );
   });
 
@@ -387,14 +421,14 @@ describe("AtlasApp", () => {
 
     fireEvent.click(within(canvas).getByRole("button", { name: /服务器网络/ }));
     expect(replace).toHaveBeenLastCalledWith(
-      "?layer=interconnect&mode=supply&stage=server-network",
+      "?view=canvas&layer=interconnect&mode=supply&stage=server-network",
     );
 
     fireEvent.click(screen.getByTestId("node-ai-server"));
     fireEvent.keyDown(document, { key: "Escape" });
 
     expect(push).toHaveBeenLastCalledWith(
-      "?layer=interconnect&mode=supply&stage=server-network",
+      "?view=canvas&layer=interconnect&mode=supply&stage=server-network",
     );
   });
 
@@ -414,7 +448,7 @@ describe("AtlasApp", () => {
     expect(search).toHaveValue("");
     expect(screen.queryByText("没有找到匹配的节点或公司")).not.toBeInTheDocument();
     expect(replace).toHaveBeenLastCalledWith(
-      "?layer=interconnect&mode=supply&stage=optical-interconnect",
+      "?view=canvas&layer=interconnect&mode=supply&stage=optical-interconnect",
     );
   });
 
@@ -430,13 +464,13 @@ describe("AtlasApp", () => {
     expect(within(companyDialog).getAllByText("N/A").length).toBeGreaterThan(0);
     expect(within(companyDialog).getByText("暂无行情数据")).toBeInTheDocument();
     expect(push).toHaveBeenLastCalledWith(
-      "?layer=interconnect&mode=supply&stage=optical-interconnect&node=cpo&company=broadcom",
+      "?view=canvas&layer=interconnect&mode=supply&stage=optical-interconnect&node=cpo&company=broadcom",
     );
 
     fireEvent.click(within(companyDialog).getByRole("button", { name: "返回共封装光学" }));
     expect(screen.getByRole("dialog", { name: "共封装光学" })).toBeInTheDocument();
     expect(push).toHaveBeenLastCalledWith(
-      "?layer=interconnect&mode=supply&stage=optical-interconnect&node=cpo",
+      "?view=canvas&layer=interconnect&mode=supply&stage=optical-interconnect&node=cpo",
     );
   });
 
@@ -494,7 +528,7 @@ describe("AtlasApp", () => {
     fireEvent.click(within(companyDialog).getByRole("button", { name: /交换芯片.*Tomahawk/ }));
     expect(screen.getByRole("dialog", { name: "交换 ASIC" })).toBeInTheDocument();
     expect(push).toHaveBeenLastCalledWith(
-      "?layer=chips&mode=supply&stage=ai-chip&node=switch-asic",
+      "?view=canvas&layer=chips&mode=supply&stage=ai-chip&node=switch-asic",
     );
 
     fireEvent.click(screen.getByRole("button", { name: /博通 AVGO/ }));
@@ -516,7 +550,7 @@ describe("AtlasApp", () => {
 
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(push).toHaveBeenLastCalledWith(
-      "?layer=interconnect&mode=supply&stage=optical-interconnect",
+      "?view=canvas&layer=interconnect&mode=supply&stage=optical-interconnect",
     );
   });
 
@@ -661,7 +695,7 @@ describe("AtlasApp", () => {
 
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(push).toHaveBeenLastCalledWith(
-      "?layer=interconnect&mode=supply&stage=optical-interconnect",
+      "?view=canvas&layer=interconnect&mode=supply&stage=optical-interconnect",
     );
   });
 
@@ -711,7 +745,7 @@ describe("AtlasApp", () => {
     window.history.pushState(
       null,
       "",
-      "?layer=interconnect&mode=supply&stage=optical-interconnect&node=cpo",
+      "?view=canvas&layer=interconnect&mode=supply&stage=optical-interconnect&node=cpo",
     );
     fireEvent.popState(window);
 

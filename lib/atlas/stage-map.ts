@@ -576,7 +576,7 @@ export const atlasStages: readonly AtlasStage[] = [
           { id: "prober", label: "探针台", description: "晶圆级电性测试设备。", kind: "equipment" },
           { id: "tester", label: "测试机", description: "成品和高速芯片测试平台。", kind: "equipment" },
           { id: "burn-in-equipment", label: "老化设备", description: "筛选长期可靠性风险。", kind: "equipment" },
-          { id: "high-speed-test", label: "高速测试", description: "验证高速电/光信号指标。", kind: "equipment" },
+          { id: "high-speed-test", label: "芯片 / 器件高速测试", description: "验证芯片、器件和高速电信号指标。", kind: "equipment" },
         ],
       },
       {
@@ -599,7 +599,7 @@ export const atlasStages: readonly AtlasStage[] = [
           { id: "optical-coupling", label: "光耦合", description: "完成芯片与光纤/透镜高精度耦合。", kind: "equipment" },
           { id: "precision-assembly", label: "精密贴装", description: "贴装激光器、透镜和光电芯片。", kind: "equipment" },
           { id: "active-alignment", label: "主动对准", description: "用信号反馈完成高精度光路对准。", kind: "equipment" },
-          { id: "optical-high-speed-test", label: "高速测试", description: "验证光模块高速指标。", kind: "equipment" },
+          { id: "optical-high-speed-test", label: "光模块 / CPO 高速测试", description: "验证光模块、光引擎和 CPO 高速光电指标。", kind: "equipment" },
           { id: "optical-burn-in", label: "老化测试", description: "筛选光模块可靠性风险。", kind: "equipment" },
         ],
       },
