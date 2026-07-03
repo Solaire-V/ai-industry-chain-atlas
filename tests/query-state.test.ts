@@ -137,6 +137,7 @@ describe("parseAtlasQuery", () => {
 describe("serializeAtlasQuery", () => {
   it("omits empty optional fields and keeps a stable key order", () => {
     const params = serializeAtlasQuery({
+      view: "canvas",
       layer: "interconnect",
       mode: "supply",
       stage: "optical-interconnect",
