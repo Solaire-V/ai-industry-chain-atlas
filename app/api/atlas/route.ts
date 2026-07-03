@@ -5,6 +5,7 @@ import {
   type AtlasNode,
   type AtlasSnapshot,
 } from "@/lib/atlas/schema";
+import { atlasStageById, type AtlasStageId } from "@/lib/atlas/stage-map";
 
 const CACHE_CONTROL = "public, s-maxage=300, stale-while-revalidate=3600";
 
@@ -43,6 +44,21 @@ const filterSnapshotByLayer = (
     return true;
   });
 
+  const subnodeCompanyCoverages = snapshot.subnodeCompanyCoverages.filter(
+    (coverage) => {
+      const stage = atlasStageById.get(coverage.stageId as AtlasStageId);
+      const group = stage?.groups.find(({ id }) => id === coverage.groupId);
+      const subnode = group?.nodes.find(({ id }) => id === coverage.subnodeId);
+      if (!subnode?.realNodeId || !visibleNodeIds.has(subnode.realNodeId)) {
+        return false;
+      }
+
+      companyIds.add(coverage.companyId);
+      for (const sourceId of coverage.sourceIds) sourceIds.add(sourceId);
+      return true;
+    },
+  );
+
   const supplyRelations = snapshot.supplyRelations.filter((relation) => {
     if (!visibleNodeIds.has(relation.nodeId)) return false;
     companyIds.add(relation.supplierId);
@@ -67,6 +83,7 @@ const filterSnapshotByLayer = (
     nodes,
     companies,
     companyNodeRoles,
+    subnodeCompanyCoverages,
     industryEdges,
     supplyRelations,
     marketSnapshots,

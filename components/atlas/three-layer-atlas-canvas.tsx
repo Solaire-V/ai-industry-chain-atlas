@@ -8,6 +8,7 @@ import type {
   AtlasMarketSnapshot,
   AtlasNode,
   AtlasSupplyRelation,
+  SubnodeCompanyCoverage,
 } from "@/lib/atlas/schema";
 import type { AtlasWorkspaceView } from "@/lib/atlas/query-state";
 import {
@@ -32,6 +33,7 @@ interface ThreeLayerAtlasCanvasProps {
   edges: readonly AtlasIndustryEdge[];
   marketSnapshots: readonly AtlasMarketSnapshot[];
   supplyRelations: readonly AtlasSupplyRelation[];
+  subnodeCompanyCoverages: readonly SubnodeCompanyCoverage[];
   activeView: AtlasWorkspaceView;
   selectedStageId: AtlasStageId;
   selectedNodeId: string | null;
@@ -761,6 +763,12 @@ interface NodeLibraryItem {
   realNode?: AtlasNode;
 }
 
+const getSubnodeCoverageKey = (
+  stageId: AtlasStageId,
+  groupId: string,
+  subnodeId: string,
+) => `${stageId}\u0000${groupId}\u0000${subnodeId}`;
+
 interface RealNodeStageAppearance {
   stageId: AtlasStageId;
   stageName: string;
@@ -812,6 +820,7 @@ function getNodeLibraryItems(
 function NodeLibraryPanel({
   nodes,
   companies,
+  subnodeCompanyCoverages,
   selectedStageId,
   selectedNodeId,
   onSelectStage,
@@ -820,6 +829,7 @@ function NodeLibraryPanel({
 }: {
   nodes: readonly AtlasNode[];
   companies: readonly AtlasCompany[];
+  subnodeCompanyCoverages: readonly SubnodeCompanyCoverage[];
   selectedStageId: AtlasStageId;
   selectedNodeId: string | null;
   onSelectStage: (stageId: AtlasStageId) => void;
@@ -834,6 +844,21 @@ function NodeLibraryPanel({
     () => new Map(companies.map((company) => [company.id, company])),
     [companies],
   );
+  const coveragesBySubnode = useMemo(() => {
+    const index = new Map<string, SubnodeCompanyCoverage[]>();
+    for (const coverage of subnodeCompanyCoverages) {
+      const key = getSubnodeCoverageKey(
+        coverage.stageId as AtlasStageId,
+        coverage.groupId,
+        coverage.subnodeId,
+      );
+      index.set(key, [...(index.get(key) ?? []), coverage]);
+    }
+    for (const coverages of index.values()) {
+      coverages.sort((left, right) => left.rank - right.rank);
+    }
+    return index;
+  }, [subnodeCompanyCoverages]);
   const realNodeAppearancesById = useMemo(
     () => getRealNodeStageAppearancesById(),
     [],
@@ -873,6 +898,15 @@ function NodeLibraryPanel({
     ? selectedRealNode.companyIds
         .map((companyId) => companyById.get(companyId))
         .filter((company): company is AtlasCompany => Boolean(company))
+    : [];
+  const selectedCoverages = selectedItem
+    ? coveragesBySubnode.get(
+        getSubnodeCoverageKey(
+          selectedItem.stage.id,
+          selectedItem.group.id,
+          selectedItem.node.id,
+        ),
+      ) ?? []
     : [];
   const selectedStageStats = {
     groupCount: selectedStage.groups.length,
@@ -997,6 +1031,13 @@ function NodeLibraryPanel({
                       ? realNodeAppearancesById.get(realNode.id) ?? []
                       : [];
                     const crossStage = isCrossStageRealNode(appearances);
+                    const coverages =
+                      coveragesBySubnode.get(
+                        getSubnodeCoverageKey(selectedStage.id, group.id, node.id),
+                      ) ?? [];
+                    const topCoverageCompany = coverages[0]
+                      ? companyById.get(coverages[0].companyId)
+                      : undefined;
                     return (
                       <button
                         key={key}
@@ -1010,7 +1051,18 @@ function NodeLibraryPanel({
                       >
                         <span>{stageSubnodeKindLabels[node.kind]}</span>
                         <strong>{node.label}</strong>
-                        <small>{realNode ? "可投资节点" : "概念节点"}</small>
+                        <small>
+                          {coverages.length
+                            ? `${coverages.length} 家覆盖`
+                            : realNode
+                              ? "可投资节点"
+                              : "概念节点"}
+                        </small>
+                        {topCoverageCompany ? (
+                          <em className="node-library-node-badge node-library-node-badge-company">
+                            {topCoverageCompany.name}
+                          </em>
+                        ) : null}
                         {crossStage ? (
                           <em className="node-library-node-badge">跨阶段</em>
                         ) : null}
@@ -1082,6 +1134,41 @@ function NodeLibraryPanel({
                   </ul>
                 </section>
               ) : null}
+              {selectedCoverages.length ? (
+                <section>
+                  <h3>子节点覆盖公司</h3>
+                  <div className="node-library-coverage-list">
+                    {selectedCoverages.map((coverage) => {
+                      const company = companyById.get(coverage.companyId);
+                      return (
+                        <article key={coverage.id}>
+                          <header>
+                            <strong>{company?.name ?? coverage.companyId}</strong>
+                            <small>
+                              {company
+                                ? `${company.ticker} · ${company.exchange} · ${company.market}`
+                                : coverage.companyId}
+                            </small>
+                          </header>
+                          <div className="node-library-coverage-tags">
+                            <span>#{coverage.rank}</span>
+                            <span>{coverage.priority}</span>
+                            <span>{coverage.relevance}</span>
+                            <span>{coverage.evidenceLevel} 级证据</span>
+                          </div>
+                          <p>{coverage.role}</p>
+                          {coverage.marketShareNote ? (
+                            <small>{coverage.marketShareNote}</small>
+                          ) : null}
+                          {coverage.marketCapNote ? (
+                            <small>{coverage.marketCapNote}</small>
+                          ) : null}
+                        </article>
+                      );
+                    })}
+                  </div>
+                </section>
+              ) : null}
               {selectedRealNode ? (
                 <>
                   <section>
@@ -1134,6 +1221,7 @@ function WorkspaceDataPanel({
   edges,
   marketSnapshots,
   supplyRelations,
+  subnodeCompanyCoverages,
   selectedStageId,
   selectedNodeId,
   onSelectStage,
@@ -1146,6 +1234,7 @@ function WorkspaceDataPanel({
   edges: readonly AtlasIndustryEdge[];
   marketSnapshots: readonly AtlasMarketSnapshot[];
   supplyRelations: readonly AtlasSupplyRelation[];
+  subnodeCompanyCoverages: readonly SubnodeCompanyCoverage[];
   selectedStageId: AtlasStageId;
   selectedNodeId: string | null;
   onSelectStage: (stageId: AtlasStageId) => void;
@@ -1157,6 +1246,7 @@ function WorkspaceDataPanel({
       <NodeLibraryPanel
         nodes={nodes}
         companies={companies}
+        subnodeCompanyCoverages={subnodeCompanyCoverages}
         selectedStageId={selectedStageId}
         selectedNodeId={selectedNodeId}
         onSelectStage={onSelectStage}
@@ -1302,6 +1392,7 @@ export function ThreeLayerAtlasCanvas({
   edges,
   marketSnapshots,
   supplyRelations,
+  subnodeCompanyCoverages,
   activeView,
   selectedStageId,
   selectedNodeId,
@@ -1404,6 +1495,7 @@ export function ThreeLayerAtlasCanvas({
             edges={visibleEdges}
             marketSnapshots={marketSnapshots}
             supplyRelations={supplyRelations}
+            subnodeCompanyCoverages={subnodeCompanyCoverages}
             selectedStageId={activeStageId}
             selectedNodeId={selectedNodeId}
             onSelectStage={(stageId) => {

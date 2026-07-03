@@ -16,7 +16,25 @@ describe("GET /api/atlas", () => {
 
   it("returns a parsed layer snapshot with public cache headers and no secrets", async () => {
     process.env.SUPABASE_SERVICE_ROLE_KEY = "service-role-secret";
-    getSnapshot.mockResolvedValueOnce(verticalSlice);
+    getSnapshot.mockResolvedValueOnce({
+      ...verticalSlice,
+      subnodeCompanyCoverages: [
+        {
+          id: "optical-interconnect-laser-node-coherent",
+          stageId: "optical-interconnect",
+          groupId: "optoelectronic-devices",
+          subnodeId: "laser-node",
+          companyId: "coherent",
+          rank: 1,
+          priority: "leader",
+          relevance: "direct",
+          evidenceLevel: "A",
+          role: "数据中心高速激光器代表公司",
+          marketShareNote: "测试分层接口保留真实节点可见的子节点公司覆盖。",
+          sourceIds: ["coherent-cpo-2026"],
+        },
+      ],
+    });
     const { GET } = await import("@/app/api/atlas/route");
 
     const response = await GET(
@@ -37,6 +55,15 @@ describe("GET /api/atlas", () => {
     expect(visibleLayers.size).toBeGreaterThan(1);
     expect(body.nodes).toEqual(
       expect.arrayContaining([expect.objectContaining({ id: "cpo" })]),
+    );
+    expect(body.subnodeCompanyCoverages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "optical-interconnect-laser-node-coherent",
+          subnodeId: "laser-node",
+          companyId: "coherent",
+        }),
+      ]),
     );
     expect(JSON.stringify(body)).not.toContain("service-role-secret");
   });

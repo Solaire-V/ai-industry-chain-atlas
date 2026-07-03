@@ -3428,6 +3428,11 @@ body {
   background: rgba(124, 58, 237, 0.1);
 }
 
+.node-library-node-badge-company {
+  color: #047857;
+  background: rgba(16, 185, 129, 0.12);
+}
+
 .node-library-detail {
   position: sticky;
   top: 16px;
@@ -3490,6 +3495,49 @@ body {
   border: 1px solid var(--atlas-border);
   border-radius: 12px;
   background: #fff;
+}
+
+.node-library-coverage-list {
+  display: grid;
+  gap: 8px;
+}
+
+.node-library-coverage-list article {
+  display: grid;
+  gap: 7px;
+  padding: 10px;
+  border: 1px solid rgba(16, 185, 129, 0.22);
+  border-radius: 14px;
+  background: linear-gradient(180deg, #ffffff, rgba(236, 253, 245, 0.8));
+}
+
+.node-library-coverage-list article > header {
+  display: grid;
+  gap: 2px;
+  padding: 0;
+  border: 0;
+}
+
+.node-library-coverage-list strong {
+  color: var(--atlas-text);
+  font-size: 13px;
+  font-weight: 920;
+}
+
+.node-library-coverage-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.node-library-coverage-tags span {
+  width: fit-content;
+  padding: 3px 7px;
+  color: #047857;
+  font-size: 10px;
+  font-weight: 900;
+  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.12);
 }
 
 .node-library-reuse-list {

@@ -6,6 +6,7 @@ import type {
   AtlasSource,
   AtlasSupplyRelation,
   CompanyNodeRole,
+  SubnodeCompanyCoverage,
 } from "@/lib/atlas/schema";
 
 const checkedAt = "2026-06-30T12:00:00.000Z";
@@ -465,10 +466,13 @@ const supplyRelations: AtlasSupplyRelation[] = [
   },
 ];
 
+const subnodeCompanyCoverages: SubnodeCompanyCoverage[] = [];
+
 export const verticalSlice: AtlasSnapshot = {
   nodes,
   companies,
   companyNodeRoles,
+  subnodeCompanyCoverages,
   industryEdges,
   supplyRelations,
   marketSnapshots: [],

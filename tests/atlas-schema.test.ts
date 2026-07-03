@@ -7,6 +7,7 @@ import {
   marketSchema,
   marketSnapshotSchema,
   nodeSchema,
+  subnodeCompanyCoverageSchema,
   sourceSchema,
   supplyRelationSchema,
   type AtlasMarket,
@@ -72,6 +73,23 @@ const validSnapshot = {
       companyId: "company-b",
       nodeId: "advanced-packaging-materials",
       role: "材料供应商",
+      sourceIds: ["source-a"],
+    },
+  ],
+  subnodeCompanyCoverages: [
+    {
+      id: "materials-silicon-wafer-company-a",
+      stageId: "materials",
+      groupId: "wafer-substrate",
+      subnodeId: "silicon-wafer",
+      companyId: "company-a",
+      rank: 1,
+      priority: "leader",
+      relevance: "direct",
+      evidenceLevel: "A",
+      role: "硅片材料代表公司",
+      marketShareNote: "用于验证市占、产能或客户地位说明字段。",
+      marketCapNote: "用于验证市值和流动性说明字段。",
       sourceIds: ["source-a"],
     },
   ],
@@ -265,6 +283,15 @@ describe("atlas domain contracts", () => {
     expect(result.success).toBe(false);
   });
 
+  it("requires evidence on a subnode company coverage", () => {
+    const result = subnodeCompanyCoverageSchema.safeParse({
+      ...validSnapshot.subnodeCompanyCoverages[0],
+      sourceIds: [],
+    });
+
+    expect(result.success).toBe(false);
+  });
+
   it("rejects duplicate entity IDs", () => {
     const result = atlasSnapshotSchema.safeParse({
       ...validSnapshot,
@@ -389,6 +416,95 @@ describe("atlas domain contracts", () => {
         ],
       },
       ["industryEdges", 0, "from"],
+    );
+  });
+
+  it.each([
+    ["companyId", "missing-company", ["subnodeCompanyCoverages", 0, "companyId"]],
+    ["sourceIds", ["missing-source"], ["subnodeCompanyCoverages", 0, "sourceIds", 0]],
+    ["stageId", "missing-stage", ["subnodeCompanyCoverages", 0, "stageId"]],
+    ["groupId", "missing-group", ["subnodeCompanyCoverages", 0, "groupId"]],
+    ["subnodeId", "missing-subnode", ["subnodeCompanyCoverages", 0, "subnodeId"]],
+  ] as const)(
+    "rejects a subnode company coverage with dangling %s",
+    (field, value, path) => {
+      expectSnapshotIssueAt(
+        {
+          ...validSnapshot,
+          subnodeCompanyCoverages: [
+            { ...validSnapshot.subnodeCompanyCoverages[0], [field]: value },
+          ],
+        },
+        [...path],
+      );
+    },
+  );
+
+  it("rejects duplicate company coverage for the same subnode", () => {
+    expectSnapshotIssueAt(
+      {
+        ...validSnapshot,
+        subnodeCompanyCoverages: [
+          validSnapshot.subnodeCompanyCoverages[0],
+          {
+            ...validSnapshot.subnodeCompanyCoverages[0],
+            id: "materials-silicon-wafer-company-a-duplicate",
+            rank: 2,
+          },
+        ],
+      },
+      ["subnodeCompanyCoverages", 1, "companyId"],
+    );
+  });
+
+  it("rejects duplicate coverage rank within the same subnode", () => {
+    const companyC = {
+      ...validSnapshot.companies[0],
+      id: "company-c",
+      ticker: "MATC",
+    };
+    expectSnapshotIssueAt(
+      {
+        ...validSnapshot,
+        companies: [...validSnapshot.companies, companyC],
+        subnodeCompanyCoverages: [
+          validSnapshot.subnodeCompanyCoverages[0],
+          {
+            ...validSnapshot.subnodeCompanyCoverages[0],
+            id: "materials-silicon-wafer-company-c",
+            companyId: "company-c",
+          },
+        ],
+      },
+      ["subnodeCompanyCoverages", 1, "rank"],
+    );
+  });
+
+  it("rejects weak or indirect coverage marked as leader", () => {
+    expectSnapshotIssueAt(
+      {
+        ...validSnapshot,
+        subnodeCompanyCoverages: [
+          {
+            ...validSnapshot.subnodeCompanyCoverages[0],
+            evidenceLevel: "D",
+          },
+        ],
+      },
+      ["subnodeCompanyCoverages", 0, "evidenceLevel"],
+    );
+
+    expectSnapshotIssueAt(
+      {
+        ...validSnapshot,
+        subnodeCompanyCoverages: [
+          {
+            ...validSnapshot.subnodeCompanyCoverages[0],
+            relevance: "indirect",
+          },
+        ],
+      },
+      ["subnodeCompanyCoverages", 0, "relevance"],
     );
   });
 

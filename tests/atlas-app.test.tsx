@@ -243,6 +243,48 @@ describe("AtlasApp", () => {
     expect(screen.getAllByText("28").length).toBeGreaterThanOrEqual(2);
   });
 
+  it("shows subnode company coverage in the node library", () => {
+    const withCoverage = atlasSnapshotSchema.parse({
+      ...verticalSlice,
+      subnodeCompanyCoverages: [
+        {
+          id: "optical-interconnect-laser-node-coherent",
+          stageId: "optical-interconnect",
+          groupId: "optoelectronic-devices",
+          subnodeId: "laser-node",
+          companyId: "coherent",
+          rank: 1,
+          priority: "leader",
+          relevance: "direct",
+          evidenceLevel: "A",
+          role: "数据中心高速激光器代表公司",
+          marketShareNote: "测试节点库展示市占、客户地位或产品地位说明。",
+          marketCapNote: "测试节点库展示上市市场和投资可跟踪性说明。",
+          sourceIds: ["coherent-cpo-2026"],
+        },
+      ],
+    });
+    renderAtlas(
+      new URLSearchParams("view=nodes&layer=interconnect&mode=supply&stage=optical-interconnect"),
+      withCoverage,
+    );
+
+    const laserCard = screen.getByTestId("library-node-laser-node");
+    expect(within(laserCard).getByText("1 家覆盖")).toBeInTheDocument();
+
+    fireEvent.click(laserCard);
+
+    const detail = screen.getByRole("complementary", { name: "节点详情" });
+    const coverageSection = within(detail)
+      .getByRole("heading", { name: "子节点覆盖公司" })
+      .closest("section");
+    expect(coverageSection).not.toBeNull();
+    expect(within(coverageSection!).getByText("Coherent")).toBeInTheDocument();
+    expect(within(coverageSection!).getByText("COHR · NYSE · US")).toBeInTheDocument();
+    expect(within(coverageSection!).getByText("A 级证据")).toBeInTheDocument();
+    expect(within(coverageSection!).getByText("数据中心高速激光器代表公司")).toBeInTheDocument();
+  });
+
   it("states market and supply data completeness on their own pages", () => {
     renderAtlas(new URLSearchParams("view=markets&layer=interconnect&mode=supply"));
 

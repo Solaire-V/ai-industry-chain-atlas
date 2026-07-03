@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { atlasStageById, type AtlasStageId } from "@/lib/atlas/stage-map";
+
 const requiredStringSchema = z.string().trim().min(1);
 const currencySchema = z.string().length(3);
 
@@ -114,6 +116,22 @@ export const companyNodeRoleSchema = z.object({
   sourceIds: z.array(requiredStringSchema).min(1),
 });
 
+export const subnodeCompanyCoverageSchema = z.object({
+  id: requiredStringSchema,
+  stageId: requiredStringSchema,
+  groupId: requiredStringSchema,
+  subnodeId: requiredStringSchema,
+  companyId: requiredStringSchema,
+  rank: z.number().int().positive(),
+  priority: z.enum(["leader", "important", "supplementary", "watch"]),
+  relevance: z.enum(["direct", "adjacent", "indirect"]),
+  evidenceLevel: z.enum(["A", "B", "C", "D"]),
+  role: z.string().trim().min(2),
+  marketShareNote: z.string().trim().optional(),
+  marketCapNote: z.string().trim().optional(),
+  sourceIds: z.array(requiredStringSchema).min(1),
+});
+
 export const marketFreshnessSourceSchema = z.enum([
   "live",
   "delayed",
@@ -166,6 +184,7 @@ export const atlasSnapshotSchema = z
     nodes: z.array(nodeSchema),
     companies: z.array(companySchema),
     companyNodeRoles: z.array(companyNodeRoleSchema),
+    subnodeCompanyCoverages: z.array(subnodeCompanyCoverageSchema),
     industryEdges: z.array(industryEdgeSchema),
     supplyRelations: z.array(supplyRelationSchema),
     marketSnapshots: z.array(marketSnapshotSchema),
@@ -194,6 +213,10 @@ export const atlasSnapshotSchema = z
     requireUniqueIds(snapshot.industryEdges, "industryEdges");
     requireUniqueIds(snapshot.supplyRelations, "supplyRelations");
     requireUniqueIds(snapshot.companyNodeRoles, "companyNodeRoles");
+    requireUniqueIds(
+      snapshot.subnodeCompanyCoverages,
+      "subnodeCompanyCoverages",
+    );
 
     const companyIds = new Set(snapshot.companies.map(({ id }) => id));
     const nodeIds = new Set(snapshot.nodes.map(({ id }) => id));
@@ -256,6 +279,79 @@ export const atlasSnapshotSchema = z
           );
         }
       });
+    });
+
+    const coverageAssociationKeys = new Set<string>();
+    const coverageRankKeys = new Set<string>();
+    snapshot.subnodeCompanyCoverages.forEach((coverage, coverageIndex) => {
+      if (!companyIds.has(coverage.companyId)) {
+        issue(
+          ["subnodeCompanyCoverages", coverageIndex, "companyId"],
+          `unknown company id: ${coverage.companyId}`,
+        );
+      }
+
+      const stage = atlasStageById.get(coverage.stageId as AtlasStageId);
+      if (!stage) {
+        issue(
+          ["subnodeCompanyCoverages", coverageIndex, "stageId"],
+          `unknown stage id: ${coverage.stageId}`,
+        );
+      } else {
+        const group = stage.groups.find(({ id }) => id === coverage.groupId);
+        if (!group) {
+          issue(
+            ["subnodeCompanyCoverages", coverageIndex, "groupId"],
+            `unknown group id: ${coverage.groupId}`,
+          );
+        } else if (!group.nodes.some(({ id }) => id === coverage.subnodeId)) {
+          issue(
+            ["subnodeCompanyCoverages", coverageIndex, "subnodeId"],
+            `unknown subnode id: ${coverage.subnodeId}`,
+          );
+        }
+      }
+
+      coverage.sourceIds.forEach((sourceId, sourceIndex) => {
+        if (!sourceIds.has(sourceId)) {
+          issue(
+            ["subnodeCompanyCoverages", coverageIndex, "sourceIds", sourceIndex],
+            `unknown source id: ${sourceId}`,
+          );
+        }
+      });
+
+      const subnodeKey = `${coverage.stageId}\u0000${coverage.groupId}\u0000${coverage.subnodeId}`;
+      const associationKey = `${subnodeKey}\u0000${coverage.companyId}`;
+      if (coverageAssociationKeys.has(associationKey)) {
+        issue(
+          ["subnodeCompanyCoverages", coverageIndex, "companyId"],
+          `duplicate subnode company coverage: ${coverage.companyId}`,
+        );
+      }
+      coverageAssociationKeys.add(associationKey);
+
+      const rankKey = `${subnodeKey}\u0000${coverage.rank}`;
+      if (coverageRankKeys.has(rankKey)) {
+        issue(
+          ["subnodeCompanyCoverages", coverageIndex, "rank"],
+          `duplicate subnode coverage rank: ${coverage.rank}`,
+        );
+      }
+      coverageRankKeys.add(rankKey);
+
+      if (coverage.priority === "leader" && coverage.evidenceLevel === "D") {
+        issue(
+          ["subnodeCompanyCoverages", coverageIndex, "evidenceLevel"],
+          "leader coverage cannot use weak evidence",
+        );
+      }
+      if (coverage.priority === "leader" && coverage.relevance === "indirect") {
+        issue(
+          ["subnodeCompanyCoverages", coverageIndex, "relevance"],
+          "leader coverage cannot be indirect",
+        );
+      }
     });
 
     snapshot.industryEdges.forEach((edge, edgeIndex) => {
@@ -332,6 +428,9 @@ export type AtlasCompany = z.infer<typeof companySchema>;
 export type AtlasIndustryEdge = z.infer<typeof industryEdgeSchema>;
 export type AtlasSupplyRelation = z.infer<typeof supplyRelationSchema>;
 export type CompanyNodeRole = z.infer<typeof companyNodeRoleSchema>;
+export type SubnodeCompanyCoverage = z.infer<
+  typeof subnodeCompanyCoverageSchema
+>;
 export type AtlasMarketSnapshot = z.infer<typeof marketSnapshotSchema>;
 export type AtlasSource = z.infer<typeof sourceSchema>;
 export type AtlasSnapshot = z.infer<typeof atlasSnapshotSchema>;
