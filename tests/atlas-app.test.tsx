@@ -209,8 +209,8 @@ describe("AtlasApp", () => {
       .map((button) => button.textContent?.replace(/\s+/g, ""));
 
     expect(highSpeedTestingCards).toEqual([
-      "设备芯片/器件高速测试概念节点",
-      "设备光模块/CPO高速测试概念节点",
+      "设备芯片/器件高速测试3家覆盖爱德万测试",
+      "设备光模块/CPO高速测试3家覆盖是德科技",
     ]);
   });
 
@@ -237,9 +237,10 @@ describe("AtlasApp", () => {
 
     const stageNav = screen.getByLabelText("节点库阶段导航");
     expect(
-      within(stageNav).getByRole("button", { name: /02.*设备.*28 个节点.*待补投资节点/ }),
+      within(stageNav).getByRole("button", { name: /02.*设备.*28 个节点.*28 个已覆盖/ }),
     ).toBeInTheDocument();
-    expect(screen.getByText("待补节点")).toBeInTheDocument();
+    expect(screen.getByText("已覆盖节点")).toBeInTheDocument();
+    expect(screen.getAllByText("公司映射").length).toBeGreaterThanOrEqual(2);
     expect(screen.getAllByText("28").length).toBeGreaterThanOrEqual(2);
   });
 

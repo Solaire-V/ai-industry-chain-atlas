@@ -899,20 +899,37 @@ function NodeLibraryPanel({
         .map((companyId) => companyById.get(companyId))
         .filter((company): company is AtlasCompany => Boolean(company))
     : [];
+  const getCoveragesForSubnode = (
+    stageId: AtlasStageId,
+    groupId: string,
+    subnodeId: string,
+  ) =>
+    coveragesBySubnode.get(getSubnodeCoverageKey(stageId, groupId, subnodeId)) ??
+    [];
+  const getStageCoverageStats = (stage: AtlasStage) => {
+    const items = getNodeLibraryItems(stage, nodeById);
+    const coverageCounts = items.map((item) =>
+      getCoveragesForSubnode(item.stage.id, item.group.id, item.node.id).length,
+    );
+    return {
+      coveredSubnodeCount: coverageCounts.filter((count) => count > 0).length,
+      companyCoverageCount: coverageCounts.reduce((total, count) => total + count, 0),
+    };
+  };
   const selectedCoverages = selectedItem
-    ? coveragesBySubnode.get(
-        getSubnodeCoverageKey(
-          selectedItem.stage.id,
-          selectedItem.group.id,
-          selectedItem.node.id,
-        ),
-      ) ?? []
+    ? getCoveragesForSubnode(
+        selectedItem.stage.id,
+        selectedItem.group.id,
+        selectedItem.node.id,
+      )
     : [];
+  const selectedCoverageStats = getStageCoverageStats(selectedStage);
   const selectedStageStats = {
     groupCount: selectedStage.groups.length,
     nodeCount: stageItems.length,
     mappedCount: stageItems.filter((item) => item.realNode).length,
-    pendingCount: stageItems.filter((item) => !item.realNode).length,
+    coveredSubnodeCount: selectedCoverageStats.coveredSubnodeCount,
+    companyCoverageCount: selectedCoverageStats.companyCoverageCount,
   };
 
   return (
@@ -946,12 +963,15 @@ function NodeLibraryPanel({
               {atlasStages.reduce(
                 (total, stage) =>
                   total +
-                  getNodeLibraryItems(stage, nodeById).filter((item) => item.realNode)
-                    .length,
+                  getStageCoverageStats(stage).coveredSubnodeCount,
                 0,
               )}
             </strong>
-            已绑定投资节点
+            已覆盖子节点
+          </span>
+          <span>
+            <strong>{subnodeCompanyCoverages.length}</strong>
+            公司映射
           </span>
         </div>
       </header>
@@ -960,7 +980,7 @@ function NodeLibraryPanel({
         <aside className="node-library-stage-nav" aria-label="节点库阶段导航">
           {atlasStages.map((stage) => {
             const items = getNodeLibraryItems(stage, nodeById);
-            const mappedCount = items.filter((item) => item.realNode).length;
+            const coverageStats = getStageCoverageStats(stage);
             return (
               <button
                 key={stage.id}
@@ -973,7 +993,9 @@ function NodeLibraryPanel({
                 <strong>{stage.name}</strong>
                 <small>
                   {items.length} 个节点 ·{" "}
-                  {mappedCount > 0 ? `${mappedCount} 个可投资` : "待补投资节点"}
+                  {coverageStats.coveredSubnodeCount > 0
+                    ? `${coverageStats.coveredSubnodeCount} 个已覆盖`
+                    : "待补公司覆盖"}
                 </small>
               </button>
             );
@@ -1006,11 +1028,15 @@ function NodeLibraryPanel({
             </span>
             <span>
               <strong>{selectedStageStats.mappedCount}</strong>
-              已绑定投资节点
+              已绑定真实节点
             </span>
             <span>
-              <strong>{selectedStageStats.pendingCount}</strong>
-              待补节点
+              <strong>{selectedStageStats.coveredSubnodeCount}</strong>
+              已覆盖节点
+            </span>
+            <span>
+              <strong>{selectedStageStats.companyCoverageCount}</strong>
+              公司映射
             </span>
           </div>
 
@@ -1031,10 +1057,11 @@ function NodeLibraryPanel({
                       ? realNodeAppearancesById.get(realNode.id) ?? []
                       : [];
                     const crossStage = isCrossStageRealNode(appearances);
-                    const coverages =
-                      coveragesBySubnode.get(
-                        getSubnodeCoverageKey(selectedStage.id, group.id, node.id),
-                      ) ?? [];
+                    const coverages = getCoveragesForSubnode(
+                      selectedStage.id,
+                      group.id,
+                      node.id,
+                    );
                     const topCoverageCompany = coverages[0]
                       ? companyById.get(coverages[0].companyId)
                       : undefined;

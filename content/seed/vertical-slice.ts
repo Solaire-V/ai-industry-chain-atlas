@@ -6,8 +6,12 @@ import type {
   AtlasSource,
   AtlasSupplyRelation,
   CompanyNodeRole,
-  SubnodeCompanyCoverage,
 } from "@/lib/atlas/schema";
+import {
+  coverageCompanies,
+  coverageSources,
+  subnodeCompanyCoverages,
+} from "@/content/seed/company-coverage";
 
 const checkedAt = "2026-06-30T12:00:00.000Z";
 
@@ -36,6 +40,7 @@ const companies: AtlasCompany[] = [
   { id: "globalwafers", name: "环球晶圆", ticker: "6488.TW", exchange: "TWSE", market: "TW", currency: "TWD" },
   { id: "yofc", name: "长飞光纤光缆", ticker: "6869.HK", exchange: "HKEX", market: "HK", currency: "HKD" },
   { id: "rogers", name: "Rogers", ticker: "ROG", exchange: "NYSE", market: "US", currency: "USD" },
+  ...coverageCompanies,
 ];
 
 const sources: AtlasSource[] = [
@@ -294,6 +299,7 @@ const sources: AtlasSource[] = [
     publishedAt: "2026-06-01",
     checkedAt,
   },
+  ...coverageSources,
 ];
 
 const nodeRiskProfiles: Record<
@@ -465,8 +471,6 @@ const supplyRelations: AtlasSupplyRelation[] = [
     announcedAt: "2026-03-16",
   },
 ];
-
-const subnodeCompanyCoverages: SubnodeCompanyCoverage[] = [];
 
 export const verticalSlice: AtlasSnapshot = {
   nodes,

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { fixtureAtlasRepository } from "@/lib/atlas/repository";
 import { atlasSnapshotSchema } from "@/lib/atlas/schema";
+import { atlasStages } from "@/lib/atlas/stage-map";
 
 const expectedNodeIds = [
   "inp-material",
@@ -154,6 +155,25 @@ describe("fixtureAtlasRepository", () => {
         }),
       ]),
     );
+  });
+
+  it("covers every minimum stage subnode with at least one company candidate", async () => {
+    const snapshot = await fixtureAtlasRepository.getSnapshot();
+    const expectedSubnodeKeys = new Set(
+      atlasStages.flatMap((stage) =>
+        stage.groups.flatMap((group) =>
+          group.nodes.map((node) => `${stage.id}\u0000${group.id}\u0000${node.id}`),
+        ),
+      ),
+    );
+    const coveredSubnodeKeys = new Set(
+      snapshot.subnodeCompanyCoverages.map(
+        (coverage) =>
+          `${coverage.stageId}\u0000${coverage.groupId}\u0000${coverage.subnodeId}`,
+      ),
+    );
+
+    expect(coveredSubnodeKeys).toEqual(expectedSubnodeKeys);
   });
 
   it("rejects duplicate IDs at the repository runtime boundary", async () => {
