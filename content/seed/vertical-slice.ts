@@ -38,7 +38,7 @@ const companies: AtlasCompany[] = [
   { id: "sumitomo-electric", name: "住友电工", ticker: "5802.T", exchange: "TSE", market: "JP", currency: "JPY" },
   { id: "soitec", name: "Soitec", ticker: "SOI.PA", exchange: "EURONEXT PARIS", market: "EU", currency: "EUR" },
   { id: "globalwafers", name: "环球晶圆", ticker: "6488.TW", exchange: "TWSE", market: "TW", currency: "TWD" },
-  { id: "yofc", name: "长飞光纤光缆", ticker: "6869.HK", exchange: "HKEX", market: "HK", currency: "HKD" },
+  { id: "yofc", name: "长飞光纤光缆", ticker: "601869.SH", exchange: "SSE", market: "CN", currency: "CNY" },
   { id: "rogers", name: "Rogers", ticker: "ROG", exchange: "NYSE", market: "US", currency: "USD" },
   ...coverageCompanies,
 ];

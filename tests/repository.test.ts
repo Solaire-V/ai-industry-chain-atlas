@@ -176,6 +176,37 @@ describe("fixtureAtlasRepository", () => {
     expect(coveredSubnodeKeys).toEqual(expectedSubnodeKeys);
   });
 
+  it("keeps high-frequency A-share leaders on their investment subnodes", async () => {
+    const snapshot = await fixtureAtlasRepository.getSnapshot();
+    const companiesByTicker = new Map(
+      snapshot.companies.map((company) => [company.ticker, company]),
+    );
+    const coverageKeys = new Set(
+      snapshot.subnodeCompanyCoverages.map(
+        (coverage) => `${coverage.subnodeId}\u0000${coverage.companyId}`,
+      ),
+    );
+    const requiredAshareCoverages = [
+      ["300394.SZ", "cpo-node"],
+      ["000988.SZ", "laser-node"],
+      ["688205.SH", "pluggable-optics-node"],
+      ["688195.SH", "ocs-node"],
+      ["002463.SZ", "high-layer-pcb-node"],
+      ["002384.SZ", "high-layer-pcb-node"],
+      ["603228.SH", "high-layer-pcb-node"],
+      ["002913.SZ", "high-layer-pcb-node"],
+      ["603019.SH", "ai-server-node"],
+      ["002837.SZ", "liquid-cooling-system"],
+    ] as const;
+
+    for (const [ticker, subnodeId] of requiredAshareCoverages) {
+      const company = companiesByTicker.get(ticker);
+      expect(company, `${ticker} should be in company master data`).toBeTruthy();
+      expect(company?.market).toBe("CN");
+      expect(coverageKeys.has(`${subnodeId}\u0000${company?.id}`)).toBe(true);
+    }
+  });
+
   it("rejects duplicate IDs at the repository runtime boundary", async () => {
     const snapshot = await fixtureAtlasRepository.getSnapshot();
     const result = atlasSnapshotSchema.safeParse({

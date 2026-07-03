@@ -769,6 +769,9 @@ const getSubnodeCoverageKey = (
   subnodeId: string,
 ) => `${stageId}\u0000${groupId}\u0000${subnodeId}`;
 
+const isAshareCompany = (company: AtlasCompany | undefined) =>
+  company?.market === "CN" && /\.(SH|SZ|BJ)$/.test(company.ticker);
+
 interface RealNodeStageAppearance {
   stageId: AtlasStageId;
   stageName: string;
@@ -923,6 +926,20 @@ function NodeLibraryPanel({
         selectedItem.node.id,
       )
     : [];
+  const selectedCoverageGroups = [
+    {
+      title: "A股",
+      coverages: selectedCoverages.filter((coverage) =>
+        isAshareCompany(companyById.get(coverage.companyId)),
+      ),
+    },
+    {
+      title: "其他",
+      coverages: selectedCoverages.filter(
+        (coverage) => !isAshareCompany(companyById.get(coverage.companyId)),
+      ),
+    },
+  ].filter(({ coverages }) => coverages.length > 0);
   const selectedCoverageStats = getStageCoverageStats(selectedStage);
   const selectedStageStats = {
     groupCount: selectedStage.groups.length,
@@ -1165,34 +1182,41 @@ function NodeLibraryPanel({
                 <section>
                   <h3>子节点覆盖公司</h3>
                   <div className="node-library-coverage-list">
-                    {selectedCoverages.map((coverage) => {
-                      const company = companyById.get(coverage.companyId);
-                      return (
-                        <article key={coverage.id}>
-                          <header>
-                            <strong>{company?.name ?? coverage.companyId}</strong>
-                            <small>
-                              {company
-                                ? `${company.ticker} · ${company.exchange} · ${company.market}`
-                                : coverage.companyId}
-                            </small>
-                          </header>
-                          <div className="node-library-coverage-tags">
-                            <span>#{coverage.rank}</span>
-                            <span>{coverage.priority}</span>
-                            <span>{coverage.relevance}</span>
-                            <span>{coverage.evidenceLevel} 级证据</span>
-                          </div>
-                          <p>{coverage.role}</p>
-                          {coverage.marketShareNote ? (
-                            <small>{coverage.marketShareNote}</small>
-                          ) : null}
-                          {coverage.marketCapNote ? (
-                            <small>{coverage.marketCapNote}</small>
-                          ) : null}
-                        </article>
-                      );
-                    })}
+                    {selectedCoverageGroups.map((group) => (
+                      <div key={group.title} className="node-library-coverage-group">
+                        <h4>{group.title}</h4>
+                        <div className="node-library-coverage-group-list">
+                          {group.coverages.map((coverage) => {
+                            const company = companyById.get(coverage.companyId);
+                            return (
+                              <article key={coverage.id}>
+                                <header>
+                                  <strong>{company?.name ?? coverage.companyId}</strong>
+                                  <small>
+                                    {company
+                                      ? `${company.ticker} · ${company.exchange} · ${company.market}`
+                                      : coverage.companyId}
+                                  </small>
+                                </header>
+                                <div className="node-library-coverage-tags">
+                                  <span>#{coverage.rank}</span>
+                                  <span>{coverage.priority}</span>
+                                  <span>{coverage.relevance}</span>
+                                  <span>{coverage.evidenceLevel} 级证据</span>
+                                </div>
+                                <p>{coverage.role}</p>
+                                {coverage.marketShareNote ? (
+                                  <small>{coverage.marketShareNote}</small>
+                                ) : null}
+                                {coverage.marketCapNote ? (
+                                  <small>{coverage.marketCapNote}</small>
+                                ) : null}
+                              </article>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </section>
               ) : null}

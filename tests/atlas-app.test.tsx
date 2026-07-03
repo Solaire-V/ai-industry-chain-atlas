@@ -210,7 +210,7 @@ describe("AtlasApp", () => {
 
     expect(highSpeedTestingCards).toEqual([
       "设备芯片/器件高速测试3家覆盖爱德万测试",
-      "设备光模块/CPO高速测试3家覆盖是德科技",
+      "设备光模块/CPO高速测试4家覆盖是德科技",
     ]);
   });
 
@@ -284,6 +284,26 @@ describe("AtlasApp", () => {
     expect(within(coverageSection!).getByText("COHR · NYSE · US")).toBeInTheDocument();
     expect(within(coverageSection!).getByText("A 级证据")).toBeInTheDocument();
     expect(within(coverageSection!).getByText("数据中心高速激光器代表公司")).toBeInTheDocument();
+  });
+
+  it("splits subnode coverage companies into A-share and other markets", () => {
+    renderAtlas(
+      new URLSearchParams("view=nodes&layer=interconnect&mode=supply&stage=optical-interconnect"),
+    );
+
+    fireEvent.click(screen.getByTestId("library-node-laser-node"));
+
+    const detail = screen.getByRole("complementary", { name: "节点详情" });
+    const coverageSection = within(detail)
+      .getByRole("heading", { name: "子节点覆盖公司" })
+      .closest("section");
+    expect(coverageSection).not.toBeNull();
+
+    expect(within(coverageSection!).getByRole("heading", { name: "A股" })).toBeInTheDocument();
+    expect(within(coverageSection!).getByText("源杰科技")).toBeInTheDocument();
+    expect(within(coverageSection!).getByText("688498.SH · SSE STAR · CN")).toBeInTheDocument();
+    expect(within(coverageSection!).getByRole("heading", { name: "其他" })).toBeInTheDocument();
+    expect(within(coverageSection!).getByText("Coherent")).toBeInTheDocument();
   });
 
   it("states market and supply data completeness on their own pages", () => {

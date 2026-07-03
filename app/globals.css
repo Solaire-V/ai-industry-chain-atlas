@@ -3499,10 +3499,27 @@ body {
 
 .node-library-coverage-list {
   display: grid;
+  gap: 12px;
+}
+
+.node-library-coverage-group {
+  display: grid;
   gap: 8px;
 }
 
-.node-library-coverage-list article {
+.node-library-coverage-group h4 {
+  margin: 0;
+  color: var(--atlas-text);
+  font-size: 12px;
+  font-weight: 920;
+}
+
+.node-library-coverage-group-list {
+  display: grid;
+  gap: 8px;
+}
+
+.node-library-coverage-group-list article {
   display: grid;
   gap: 7px;
   padding: 10px;
@@ -3511,14 +3528,14 @@ body {
   background: linear-gradient(180deg, #ffffff, rgba(236, 253, 245, 0.8));
 }
 
-.node-library-coverage-list article > header {
+.node-library-coverage-group-list article > header {
   display: grid;
   gap: 2px;
   padding: 0;
   border: 0;
 }
 
-.node-library-coverage-list strong {
+.node-library-coverage-group-list strong {
   color: var(--atlas-text);
   font-size: 13px;
   font-weight: 920;
