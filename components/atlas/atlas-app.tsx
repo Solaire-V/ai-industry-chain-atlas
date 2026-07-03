@@ -238,6 +238,8 @@ export function AtlasApp({
         nodes={posterNodes}
         companies={initialSnapshot.companies}
         edges={initialSnapshot.industryEdges}
+        marketSnapshots={initialSnapshot.marketSnapshots}
+        supplyRelations={initialSnapshot.supplyRelations}
         activeView={query.view}
         selectedStageId={selectedStageId}
         selectedNodeId={selectedNode?.id ?? null}

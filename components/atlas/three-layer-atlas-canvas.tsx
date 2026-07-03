@@ -5,7 +5,9 @@ import { getNeighborhood } from "@/lib/atlas/graph";
 import type {
   AtlasCompany,
   AtlasIndustryEdge,
+  AtlasMarketSnapshot,
   AtlasNode,
+  AtlasSupplyRelation,
 } from "@/lib/atlas/schema";
 import type { AtlasWorkspaceView } from "@/lib/atlas/query-state";
 import {
@@ -28,6 +30,8 @@ interface ThreeLayerAtlasCanvasProps {
   nodes: readonly AtlasNode[];
   companies: readonly AtlasCompany[];
   edges: readonly AtlasIndustryEdge[];
+  marketSnapshots: readonly AtlasMarketSnapshot[];
+  supplyRelations: readonly AtlasSupplyRelation[];
   activeView: AtlasWorkspaceView;
   selectedStageId: AtlasStageId;
   selectedNodeId: string | null;
@@ -757,6 +761,39 @@ interface NodeLibraryItem {
   realNode?: AtlasNode;
 }
 
+interface RealNodeStageAppearance {
+  stageId: AtlasStageId;
+  stageName: string;
+  groupTitle: string;
+  nodeLabel: string;
+}
+
+function getRealNodeStageAppearancesById() {
+  const appearances = new Map<string, RealNodeStageAppearance[]>();
+
+  for (const stage of atlasStages) {
+    for (const group of stage.groups) {
+      for (const node of group.nodes) {
+        if (!node.realNodeId) continue;
+        const existing = appearances.get(node.realNodeId) ?? [];
+        existing.push({
+          stageId: stage.id,
+          stageName: stage.name,
+          groupTitle: group.title,
+          nodeLabel: node.label,
+        });
+        appearances.set(node.realNodeId, existing);
+      }
+    }
+  }
+
+  return appearances;
+}
+
+function isCrossStageRealNode(appearances: readonly RealNodeStageAppearance[]) {
+  return new Set(appearances.map(({ stageId }) => stageId)).size > 1;
+}
+
 function getNodeLibraryItems(
   stage: AtlasStage,
   nodeById: ReadonlyMap<string, AtlasNode>,
@@ -797,6 +834,10 @@ function NodeLibraryPanel({
     () => new Map(companies.map((company) => [company.id, company])),
     [companies],
   );
+  const realNodeAppearancesById = useMemo(
+    () => getRealNodeStageAppearancesById(),
+    [],
+  );
   const selectedStage =
     atlasStageById.get(selectedStageId) ?? atlasStages[0]!;
   const stageItems = useMemo(
@@ -824,6 +865,10 @@ function NodeLibraryPanel({
   const selectedItem =
     stageItems.find((item) => item.key === selectedItemKey) ?? stageItems[0];
   const selectedRealNode = selectedItem?.realNode;
+  const selectedRealNodeAppearances = selectedRealNode
+    ? realNodeAppearancesById.get(selectedRealNode.id) ?? []
+    : [];
+  const selectedIsCrossStage = isCrossStageRealNode(selectedRealNodeAppearances);
   const selectedCompanies = selectedRealNode
     ? selectedRealNode.companyIds
         .map((companyId) => companyById.get(companyId))
@@ -833,6 +878,7 @@ function NodeLibraryPanel({
     groupCount: selectedStage.groups.length,
     nodeCount: stageItems.length,
     mappedCount: stageItems.filter((item) => item.realNode).length,
+    pendingCount: stageItems.filter((item) => !item.realNode).length,
   };
 
   return (
@@ -892,7 +938,8 @@ function NodeLibraryPanel({
                 <span>{String(stage.order).padStart(2, "0")}</span>
                 <strong>{stage.name}</strong>
                 <small>
-                  {items.length} 个节点 · {mappedCount} 个可投资
+                  {items.length} 个节点 ·{" "}
+                  {mappedCount > 0 ? `${mappedCount} 个可投资` : "待补投资节点"}
                 </small>
               </button>
             );
@@ -927,6 +974,10 @@ function NodeLibraryPanel({
               <strong>{selectedStageStats.mappedCount}</strong>
               已绑定投资节点
             </span>
+            <span>
+              <strong>{selectedStageStats.pendingCount}</strong>
+              待补节点
+            </span>
           </div>
 
           <div className="node-library-groups">
@@ -942,6 +993,10 @@ function NodeLibraryPanel({
                     const realNode = node.realNodeId
                       ? nodeById.get(node.realNodeId)
                       : undefined;
+                    const appearances = realNode
+                      ? realNodeAppearancesById.get(realNode.id) ?? []
+                      : [];
+                    const crossStage = isCrossStageRealNode(appearances);
                     return (
                       <button
                         key={key}
@@ -949,12 +1004,16 @@ function NodeLibraryPanel({
                         aria-pressed={selectedItem?.key === key}
                         data-selected={selectedItem?.key === key}
                         data-mapped={Boolean(realNode)}
+                        data-cross-stage={crossStage}
                         data-testid={`library-node-${node.id}`}
                         onClick={() => setSelectedItemKey(key)}
                       >
                         <span>{stageSubnodeKindLabels[node.kind]}</span>
                         <strong>{node.label}</strong>
                         <small>{realNode ? "可投资节点" : "概念节点"}</small>
+                        {crossStage ? (
+                          <em className="node-library-node-badge">跨阶段</em>
+                        ) : null}
                       </button>
                     );
                   })}
@@ -1003,6 +1062,26 @@ function NodeLibraryPanel({
                   </div>
                 </dl>
               </section>
+              {selectedIsCrossStage ? (
+                <section>
+                  <h3>跨阶段复用</h3>
+                  <p>
+                    同一个真实节点在多个主链模块承担不同角色，属于复用关系，不是重复数据。
+                  </p>
+                  <ul className="node-library-reuse-list">
+                    {selectedRealNodeAppearances.map((appearance) => (
+                      <li
+                        key={`${appearance.stageId}:${appearance.groupTitle}:${appearance.nodeLabel}`}
+                      >
+                        <strong>
+                          {appearance.stageName} / {appearance.groupTitle}
+                        </strong>
+                        <small>{appearance.nodeLabel}</small>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              ) : null}
               {selectedRealNode ? (
                 <>
                   <section>
@@ -1053,6 +1132,8 @@ function WorkspaceDataPanel({
   nodes,
   companies,
   edges,
+  marketSnapshots,
+  supplyRelations,
   selectedStageId,
   selectedNodeId,
   onSelectStage,
@@ -1063,6 +1144,8 @@ function WorkspaceDataPanel({
   nodes: readonly AtlasNode[];
   companies: readonly AtlasCompany[];
   edges: readonly AtlasIndustryEdge[];
+  marketSnapshots: readonly AtlasMarketSnapshot[];
+  supplyRelations: readonly AtlasSupplyRelation[];
   selectedStageId: AtlasStageId;
   selectedNodeId: string | null;
   onSelectStage: (stageId: AtlasStageId) => void;
@@ -1084,12 +1167,27 @@ function WorkspaceDataPanel({
   }
 
   if (view === "companies") {
+    const mountedRoleCount = nodes.reduce(
+      (total, node) => total + node.companyIds.length,
+      0,
+    );
+
     return (
       <section className="workspace-data-panel" aria-label="公司库">
         <header>
           <h1>公司库</h1>
           <p>公司基本资料独立维护，后续再按节点挂龙头公司、国内外分类和业务标签。</p>
         </header>
+        <div className="workspace-status-grid" aria-label="公司数据完整度">
+          <article>
+            <strong>{companies.length} 家公司</strong>
+            <small>当前代表公司主数据</small>
+          </article>
+          <article>
+            <strong>{mountedRoleCount} 个节点挂载</strong>
+            <small>公司与节点的当前关联覆盖</small>
+          </article>
+        </div>
         <div className="workspace-table" role="table" aria-label="代表公司预览">
           <div role="row">
             <strong role="columnheader">公司</strong>
@@ -1121,6 +1219,14 @@ function WorkspaceDataPanel({
           <h1>行情数据</h1>
           <p>股价、涨跌幅、市值、PE、PS 与更新时间放在这里，不进入主流程画布。</p>
         </header>
+        <div className="workspace-status-grid" aria-label="行情数据完整度">
+          <article data-state={marketSnapshots.length ? "ready" : "empty"}>
+            <strong>{marketSnapshots.length} 条行情快照</strong>
+            <small>
+              {marketSnapshots.length ? "已接入行情数据" : "行情源未接入"}
+            </small>
+          </article>
+        </div>
         <div className="workspace-placeholder-list">
           {["实时股价", "市盈率 PE", "市值 / PS", "交易所与币种", "更新时间"].map((item) => (
             <article key={item}>
@@ -1140,6 +1246,20 @@ function WorkspaceDataPanel({
           <h1>供需关系</h1>
           <p>这里承接多对多上下游关系，包含关系类型、证据来源和置信度；主画布只保留稳定链路。</p>
         </header>
+        <div className="workspace-status-grid" aria-label="供需数据完整度">
+          <article>
+            <strong>{edges.length} 条产业链边</strong>
+            <small>节点之间的稳定产业链关系</small>
+          </article>
+          <article data-state={supplyRelations.length > 1 ? "ready" : "partial"}>
+            <strong>{supplyRelations.length} 条公司级供需关系</strong>
+            <small>
+              {supplyRelations.length > 1
+                ? "公司供应关系已接入"
+                : "供应关系数据待补全"}
+            </small>
+          </article>
+        </div>
         <div className="workspace-table" role="table" aria-label="产业边预览">
           <div role="row">
             <strong role="columnheader">上游</strong>
@@ -1180,6 +1300,8 @@ export function ThreeLayerAtlasCanvas({
   nodes,
   companies,
   edges,
+  marketSnapshots,
+  supplyRelations,
   activeView,
   selectedStageId,
   selectedNodeId,
@@ -1280,6 +1402,8 @@ export function ThreeLayerAtlasCanvas({
             nodes={nodes}
             companies={companies}
             edges={visibleEdges}
+            marketSnapshots={marketSnapshots}
+            supplyRelations={supplyRelations}
             selectedStageId={activeStageId}
             selectedNodeId={selectedNodeId}
             onSelectStage={(stageId) => {

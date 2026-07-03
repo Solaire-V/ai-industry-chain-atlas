@@ -3336,7 +3336,7 @@ body {
 
 .node-library-stage-metrics {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
 }
 
@@ -3388,6 +3388,10 @@ body {
   background: linear-gradient(180deg, #ffffff, #eef7ff);
 }
 
+.node-library-node-grid button[data-cross-stage="true"] {
+  border-color: rgba(124, 58, 237, 0.26);
+}
+
 .node-library-node-grid span,
 .node-library-detail header > span {
   width: fit-content;
@@ -3411,6 +3415,17 @@ body {
   color: var(--atlas-muted);
   font-size: 11px;
   line-height: 1.35;
+}
+
+.node-library-node-badge {
+  width: fit-content;
+  padding: 3px 7px;
+  color: #6d28d9;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 920;
+  border-radius: 999px;
+  background: rgba(124, 58, 237, 0.1);
 }
 
 .node-library-detail {
@@ -3475,6 +3490,62 @@ body {
   border: 1px solid var(--atlas-border);
   border-radius: 12px;
   background: #fff;
+}
+
+.node-library-reuse-list {
+  display: grid;
+  gap: 7px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.node-library-reuse-list li {
+  display: grid;
+  gap: 2px;
+  padding: 8px 9px;
+  border: 1px solid var(--atlas-border);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.node-library-reuse-list strong {
+  color: var(--atlas-text);
+  font-size: 12px;
+  font-weight: 880;
+}
+
+.workspace-status-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.workspace-status-grid article {
+  display: grid;
+  gap: 4px;
+  padding: 13px 14px;
+  border: 1px solid var(--atlas-border);
+  border-radius: 16px;
+  background: #fff;
+}
+
+.workspace-status-grid article[data-state="empty"],
+.workspace-status-grid article[data-state="partial"] {
+  border-color: rgba(245, 158, 11, 0.32);
+  background: linear-gradient(180deg, #fffdfa, #fff7ed);
+}
+
+.workspace-status-grid strong {
+  color: var(--atlas-text);
+  font-size: 16px;
+  font-weight: 930;
+}
+
+.workspace-status-grid small {
+  color: var(--atlas-muted);
+  font-size: 12px;
+  line-height: 1.4;
 }
 
 .workspace-table {

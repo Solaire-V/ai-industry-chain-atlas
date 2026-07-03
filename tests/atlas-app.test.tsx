@@ -214,6 +214,50 @@ describe("AtlasApp", () => {
     ]);
   });
 
+  it("marks reused real nodes with their cross-stage positions", () => {
+    renderAtlas(
+      new URLSearchParams("view=nodes&layer=interconnect&mode=supply&stage=materials"),
+    );
+
+    const lowLossCclCard = screen.getByTestId("library-node-low-loss-ccl");
+    expect(within(lowLossCclCard).getByText("跨阶段")).toBeInTheDocument();
+
+    fireEvent.click(lowLossCclCard);
+
+    const detail = screen.getByRole("complementary", { name: "节点详情" });
+    expect(within(detail).getByRole("heading", { name: "跨阶段复用" })).toBeInTheDocument();
+    expect(within(detail).getByText("材料 / PCB 材料")).toBeInTheDocument();
+    expect(within(detail).getByText("板级系统 / 高速板级互联")).toBeInTheDocument();
+  });
+
+  it("shows node-library data completeness instead of ambiguous zero counts", () => {
+    renderAtlas(
+      new URLSearchParams("view=nodes&layer=interconnect&mode=supply&stage=equipment"),
+    );
+
+    const stageNav = screen.getByLabelText("节点库阶段导航");
+    expect(
+      within(stageNav).getByRole("button", { name: /02.*设备.*28 个节点.*待补投资节点/ }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("待补节点")).toBeInTheDocument();
+    expect(screen.getAllByText("28").length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("states market and supply data completeness on their own pages", () => {
+    renderAtlas(new URLSearchParams("view=markets&layer=interconnect&mode=supply"));
+
+    expect(screen.getByRole("heading", { name: "行情数据" })).toBeInTheDocument();
+    expect(screen.getByText("行情源未接入")).toBeInTheDocument();
+    expect(screen.getByText("0 条行情快照")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /供需关系/ }));
+
+    expect(screen.getByRole("heading", { name: "供需关系" })).toBeInTheDocument();
+    expect(screen.getByText("21 条产业链边")).toBeInTheDocument();
+    expect(screen.getByText("1 条公司级供需关系")).toBeInTheDocument();
+    expect(screen.getByText("供应关系数据待补全")).toBeInTheDocument();
+  });
+
   it("opens investable node details from the node library while leaving concept nodes local", () => {
     renderAtlas(new URLSearchParams("layer=interconnect&mode=supply&stage=optical-interconnect"));
 
