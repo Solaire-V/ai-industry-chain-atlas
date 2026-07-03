@@ -142,7 +142,7 @@ describe("AtlasApp", () => {
     expect(screen.queryByText("光刻胶")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /节点库/ }));
     expect(screen.getByRole("heading", { name: "节点库" })).toBeInTheDocument();
-    expect(screen.getByText("硅片")).toBeInTheDocument();
+    expect(screen.getAllByText("硅片").length).toBeGreaterThan(0);
     expect(screen.getAllByText("SOI").length).toBeGreaterThan(0);
     expect(screen.getByText("InP")).toBeInTheDocument();
     expect(screen.getByText("光刻胶")).toBeInTheDocument();
@@ -155,6 +155,42 @@ describe("AtlasApp", () => {
     expect(screen.getByRole("heading", { name: "行情数据" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /供需关系/ }));
     expect(screen.getByRole("heading", { name: "供需关系" })).toBeInTheDocument();
+  });
+
+  it("keeps node library stages aligned with the main canvas", () => {
+    renderAtlas(new URLSearchParams("layer=interconnect&mode=supply&stage=materials"));
+
+    fireEvent.click(screen.getByRole("button", { name: /节点库/ }));
+    expect(screen.getByRole("heading", { name: "节点库" })).toBeInTheDocument();
+
+    const stageNav = screen.getByLabelText("节点库阶段导航");
+    fireEvent.click(within(stageNav).getByRole("button", { name: /05.*先进封装/ }));
+
+    expect(screen.getByRole("main", { name: "先进封装细分节点" })).toBeInTheDocument();
+    expect(screen.getByText("Silicon Interposer")).toBeInTheDocument();
+    expect(screen.getByText("CoWoS")).toBeInTheDocument();
+    expect(screen.getByText("封装基板")).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "产业链泳道画布" })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "定位主界面模块" }));
+    const canvas = screen.getByRole("region", { name: "产业链泳道画布" });
+    expect(within(canvas).getByRole("button", { name: /先进封装/ })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+  });
+
+  it("opens investable node details from the node library while leaving concept nodes local", () => {
+    renderAtlas(new URLSearchParams("layer=interconnect&mode=supply&stage=optical-interconnect"));
+
+    fireEvent.click(screen.getByRole("button", { name: /节点库/ }));
+    fireEvent.click(screen.getByTestId("library-node-cpo-node"));
+
+    expect(screen.getByRole("complementary", { name: "节点详情" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "打开节点详情" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "打开节点详情" }));
+    expect(screen.getByRole("dialog", { name: "共封装光学" })).toBeInTheDocument();
   });
 
   it("shows equipment as an upstream stage and as manufacturing enablement", () => {

@@ -18,6 +18,9 @@ import {
   type AtlasStageId,
   type MainChainConnection,
   type StageConnectionKind,
+  type StageGroup,
+  type StageSubnode,
+  type StageSubnodeKind,
 } from "@/lib/atlas/stage-map";
 
 interface ThreeLayerAtlasCanvasProps {
@@ -250,6 +253,15 @@ const relationshipTypeLabels: Readonly<
 const stageConnectionKindLabels: Readonly<Record<StageConnectionKind, string>> = {
   flow: "产品 / 物料流",
   enable: "制造使能",
+};
+
+const stageSubnodeKindLabels: Readonly<Record<StageSubnodeKind, string>> = {
+  material: "材料",
+  equipment: "设备",
+  component: "组件",
+  system: "系统",
+  software: "软件",
+  application: "应用",
 };
 
 const isStageId = (id: SwimlaneNode["stageId"]): id is AtlasStageId =>
@@ -739,50 +751,337 @@ function StageInspector({
   );
 }
 
+interface NodeLibraryItem {
+  key: string;
+  stage: AtlasStage;
+  group: StageGroup;
+  node: StageSubnode;
+  realNode?: AtlasNode;
+}
+
+function getNodeLibraryItems(
+  stage: AtlasStage,
+  nodeById: ReadonlyMap<string, AtlasNode>,
+): readonly NodeLibraryItem[] {
+  return stage.groups.flatMap((group) =>
+    group.nodes.map((node) => ({
+      key: `${stage.id}:${group.id}:${node.id}`,
+      stage,
+      group,
+      node,
+      realNode: node.realNodeId ? nodeById.get(node.realNodeId) : undefined,
+    })),
+  );
+}
+
+function NodeLibraryPanel({
+  nodes,
+  companies,
+  selectedStageId,
+  selectedNodeId,
+  onSelectStage,
+  onOpenStageInCanvas,
+  onSelectNode,
+}: {
+  nodes: readonly AtlasNode[];
+  companies: readonly AtlasCompany[];
+  selectedStageId: AtlasStageId;
+  selectedNodeId: string | null;
+  onSelectStage: (stageId: AtlasStageId) => void;
+  onOpenStageInCanvas: (stageId: AtlasStageId) => void;
+  onSelectNode: (nodeId: string) => void;
+}) {
+  const nodeById = useMemo(
+    () => new Map(nodes.map((node) => [node.id, node])),
+    [nodes],
+  );
+  const companyById = useMemo(
+    () => new Map(companies.map((company) => [company.id, company])),
+    [companies],
+  );
+  const selectedStage =
+    atlasStageById.get(selectedStageId) ?? atlasStages[0]!;
+  const stageItems = useMemo(
+    () => getNodeLibraryItems(selectedStage, nodeById),
+    [nodeById, selectedStage],
+  );
+  const [selectedItemKey, setSelectedItemKey] = useState<string | null>(null);
+
+  useEffect(() => {
+    const selectedRealNodeItem = selectedNodeId
+      ? stageItems.find((item) => item.realNode?.id === selectedNodeId)
+      : undefined;
+    const fallbackItem = stageItems[0];
+    const keyStillVisible = stageItems.some((item) => item.key === selectedItemKey);
+
+    if (selectedRealNodeItem && selectedRealNodeItem.key !== selectedItemKey) {
+      setSelectedItemKey(selectedRealNodeItem.key);
+      return;
+    }
+    if (!keyStillVisible) {
+      setSelectedItemKey(fallbackItem?.key ?? null);
+    }
+  }, [selectedItemKey, selectedNodeId, stageItems]);
+
+  const selectedItem =
+    stageItems.find((item) => item.key === selectedItemKey) ?? stageItems[0];
+  const selectedRealNode = selectedItem?.realNode;
+  const selectedCompanies = selectedRealNode
+    ? selectedRealNode.companyIds
+        .map((companyId) => companyById.get(companyId))
+        .filter((company): company is AtlasCompany => Boolean(company))
+    : [];
+  const selectedStageStats = {
+    groupCount: selectedStage.groups.length,
+    nodeCount: stageItems.length,
+    mappedCount: stageItems.filter((item) => item.realNode).length,
+  };
+
+  return (
+    <section className="workspace-data-panel node-library-panel" aria-label="节点库">
+      <header className="node-library-header">
+        <div>
+          <h1>节点库</h1>
+          <p>
+            细分节点索引与主界面 9 个模块共用同一份 stageId / nodeId；
+            概念节点用于理解流程，可投资节点可继续打开公司与证据详情。
+          </p>
+        </div>
+        <div className="node-library-summary" aria-label="节点库统计">
+          <span>
+            <strong>{atlasStages.length}</strong>
+            主链模块
+          </span>
+          <span>
+            <strong>
+              {atlasStages.reduce(
+                (total, stage) =>
+                  total +
+                  stage.groups.reduce((count, group) => count + group.nodes.length, 0),
+                0,
+              )}
+            </strong>
+            细分节点
+          </span>
+          <span>
+            <strong>
+              {atlasStages.reduce(
+                (total, stage) =>
+                  total +
+                  getNodeLibraryItems(stage, nodeById).filter((item) => item.realNode)
+                    .length,
+                0,
+              )}
+            </strong>
+            已绑定投资节点
+          </span>
+        </div>
+      </header>
+
+      <div className="node-library-layout">
+        <aside className="node-library-stage-nav" aria-label="节点库阶段导航">
+          {atlasStages.map((stage) => {
+            const items = getNodeLibraryItems(stage, nodeById);
+            const mappedCount = items.filter((item) => item.realNode).length;
+            return (
+              <button
+                key={stage.id}
+                type="button"
+                aria-pressed={stage.id === selectedStage.id}
+                data-active={stage.id === selectedStage.id}
+                onClick={() => onSelectStage(stage.id)}
+              >
+                <span>{String(stage.order).padStart(2, "0")}</span>
+                <strong>{stage.name}</strong>
+                <small>
+                  {items.length} 个节点 · {mappedCount} 个可投资
+                </small>
+              </button>
+            );
+          })}
+        </aside>
+
+        <main className="node-library-browser" aria-label={`${selectedStage.name}细分节点`}>
+          <section className="node-library-stage-overview">
+            <div>
+              <small>{stageLaneLabels[selectedStage.id]}</small>
+              <h2>{selectedStage.name}</h2>
+              <p>{selectedStage.summary}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => onOpenStageInCanvas(selectedStage.id)}
+            >
+              定位主界面模块
+            </button>
+          </section>
+
+          <div className="node-library-stage-metrics" aria-label="当前阶段节点统计">
+            <span>
+              <strong>{selectedStageStats.groupCount}</strong>
+              二级分类
+            </span>
+            <span>
+              <strong>{selectedStageStats.nodeCount}</strong>
+              细分节点
+            </span>
+            <span>
+              <strong>{selectedStageStats.mappedCount}</strong>
+              已绑定投资节点
+            </span>
+          </div>
+
+          <div className="node-library-groups">
+            {selectedStage.groups.map((group) => (
+              <article key={group.id} className="node-library-group">
+                <header>
+                  <h3>{group.title}</h3>
+                  <p>{group.summary}</p>
+                </header>
+                <div className="node-library-node-grid">
+                  {group.nodes.map((node) => {
+                    const key = `${selectedStage.id}:${group.id}:${node.id}`;
+                    const realNode = node.realNodeId
+                      ? nodeById.get(node.realNodeId)
+                      : undefined;
+                    return (
+                      <button
+                        key={key}
+                        type="button"
+                        aria-pressed={selectedItem?.key === key}
+                        data-selected={selectedItem?.key === key}
+                        data-mapped={Boolean(realNode)}
+                        data-testid={`library-node-${node.id}`}
+                        onClick={() => setSelectedItemKey(key)}
+                      >
+                        <span>{stageSubnodeKindLabels[node.kind]}</span>
+                        <strong>{node.label}</strong>
+                        <small>{realNode ? "可投资节点" : "概念节点"}</small>
+                      </button>
+                    );
+                  })}
+                </div>
+              </article>
+            ))}
+          </div>
+        </main>
+
+        <aside className="node-library-detail" aria-label="节点详情">
+          {selectedItem ? (
+            <>
+              <header>
+                <span>{stageSubnodeKindLabels[selectedItem.node.kind]}</span>
+                <h2>{selectedItem.node.label}</h2>
+                <small>
+                  {selectedRealNode ? "可投资节点" : "概念节点"} · 对齐主界面：
+                  {selectedItem.stage.name}
+                </small>
+              </header>
+              <section>
+                <h3>节点说明</h3>
+                <p>{selectedItem.node.description}</p>
+              </section>
+              <section>
+                <h3>主界面对齐</h3>
+                <dl className="node-library-definition-list">
+                  <div>
+                    <dt>主链模块</dt>
+                    <dd>
+                      {String(selectedItem.stage.order).padStart(2, "0")} ·{" "}
+                      {selectedItem.stage.name}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>二级分类</dt>
+                    <dd>{selectedItem.group.title}</dd>
+                  </div>
+                  <div>
+                    <dt>输入</dt>
+                    <dd>{selectedItem.stage.input}</dd>
+                  </div>
+                  <div>
+                    <dt>输出</dt>
+                    <dd>{selectedItem.stage.output}</dd>
+                  </div>
+                </dl>
+              </section>
+              {selectedRealNode ? (
+                <>
+                  <section>
+                    <h3>投资节点资料</h3>
+                    <p>{selectedRealNode.summary}</p>
+                    <small>{selectedRealNode.technology}</small>
+                  </section>
+                  <section>
+                    <h3>代表公司</h3>
+                    <div className="node-library-company-list">
+                      {selectedCompanies.map((company) => (
+                        <span key={company.id}>
+                          {company.name}
+                          <small>{company.ticker}</small>
+                        </span>
+                      ))}
+                    </div>
+                  </section>
+                  <button
+                    type="button"
+                    className="node-library-primary-action"
+                    onClick={() => onSelectNode(selectedRealNode.id)}
+                  >
+                    打开节点详情
+                  </button>
+                </>
+              ) : (
+                <section>
+                  <h3>数据状态</h3>
+                  <p>
+                    当前是流程概念节点，已对齐主界面模块；后续补公司、行情或供需证据后，
+                    可以升级为可投资节点。
+                  </p>
+                </section>
+              )}
+            </>
+          ) : (
+            <p>当前阶段暂无节点。</p>
+          )}
+        </aside>
+      </div>
+    </section>
+  );
+}
+
 function WorkspaceDataPanel({
   view,
   nodes,
   companies,
   edges,
   selectedStageId,
+  selectedNodeId,
   onSelectStage,
+  onOpenStageInCanvas,
+  onSelectNode,
 }: {
   view: Exclude<WorkspaceView, "canvas">;
   nodes: readonly AtlasNode[];
   companies: readonly AtlasCompany[];
   edges: readonly AtlasIndustryEdge[];
   selectedStageId: AtlasStageId;
+  selectedNodeId: string | null;
   onSelectStage: (stageId: AtlasStageId) => void;
+  onOpenStageInCanvas: (stageId: AtlasStageId) => void;
+  onSelectNode: (nodeId: string) => void;
 }) {
   if (view === "nodes") {
     return (
-      <section className="workspace-data-panel" aria-label="节点库">
-        <header>
-          <h1>节点库</h1>
-          <p>这里承接细分材料、设备、芯片、封装、光互联等最小节点；主界面不再堆这些内容。</p>
-        </header>
-        <div className="workspace-data-grid">
-          {atlasStages.map((stage) => (
-            <article key={stage.id} data-active={stage.id === selectedStageId}>
-              <button type="button" onClick={() => onSelectStage(stage.id)}>
-                {String(stage.order).padStart(2, "0")} · {stage.name}
-              </button>
-              <p>{stage.summary}</p>
-              <small>
-                {stage.groups.reduce((count, group) => count + group.nodes.length, 0)}
-                个细分节点
-              </small>
-              <div className="workspace-node-tags">
-                {stage.groups.flatMap((group) =>
-                  group.nodes.map((node) => (
-                    <span key={`${group.id}-${node.id}`}>{node.label}</span>
-                  )),
-                )}
-              </div>
-            </article>
-          ))}
-        </div>
-      </section>
+      <NodeLibraryPanel
+        nodes={nodes}
+        companies={companies}
+        selectedStageId={selectedStageId}
+        selectedNodeId={selectedNodeId}
+        onSelectStage={onSelectStage}
+        onOpenStageInCanvas={onOpenStageInCanvas}
+        onSelectNode={onSelectNode}
+      />
     );
   }
 
@@ -982,10 +1281,15 @@ export function ThreeLayerAtlasCanvas({
             companies={companies}
             edges={visibleEdges}
             selectedStageId={activeStageId}
+            selectedNodeId={selectedNodeId}
             onSelectStage={(stageId) => {
+              onSelectStage(stageId);
+            }}
+            onOpenStageInCanvas={(stageId) => {
               setActiveView("canvas");
               onSelectStage(stageId);
             }}
+            onSelectNode={onSelectNode}
           />
         </div>
       )}
