@@ -277,16 +277,25 @@ describe("AtlasApp", () => {
 
     const detail = screen.getByRole("complementary", { name: "节点详情" });
     const coverageSection = within(detail)
-      .getByRole("heading", { name: "子节点覆盖公司" })
+      .getByRole("heading", { name: "代表公司" })
       .closest("section");
     expect(coverageSection).not.toBeNull();
+    expect(within(coverageSection!).getByRole("button", { name: "全部 1" })).toBeInTheDocument();
+    expect(within(coverageSection!).getByRole("button", { name: "其他 1" })).toBeInTheDocument();
     expect(within(coverageSection!).getByText("Coherent")).toBeInTheDocument();
-    expect(within(coverageSection!).getByText("COHR · NYSE · US")).toBeInTheDocument();
-    expect(within(coverageSection!).getByText("A 级证据")).toBeInTheDocument();
+    expect(within(coverageSection!).getByText("COHR · NYSE")).toBeInTheDocument();
+    expect(within(coverageSection!).getByText("美股")).toBeInTheDocument();
     expect(within(coverageSection!).getByText("数据中心高速激光器代表公司")).toBeInTheDocument();
+    expect(within(coverageSection!).queryByText("A 级证据")).not.toBeInTheDocument();
+    expect(
+      within(coverageSection!).queryByText("测试节点库展示市占、客户地位或产品地位说明。"),
+    ).not.toBeInTheDocument();
+    expect(
+      within(coverageSection!).queryByText("测试节点库展示上市市场和投资可跟踪性说明。"),
+    ).not.toBeInTheDocument();
   });
 
-  it("splits subnode coverage companies into A-share and other markets", () => {
+  it("filters subnode coverage companies with compact market chips", () => {
     renderAtlas(
       new URLSearchParams("view=nodes&layer=interconnect&mode=supply&stage=optical-interconnect"),
     );
@@ -295,15 +304,31 @@ describe("AtlasApp", () => {
 
     const detail = screen.getByRole("complementary", { name: "节点详情" });
     const coverageSection = within(detail)
-      .getByRole("heading", { name: "子节点覆盖公司" })
+      .getByRole("heading", { name: "代表公司" })
       .closest("section");
     expect(coverageSection).not.toBeNull();
 
-    expect(within(coverageSection!).getByRole("heading", { name: "A股" })).toBeInTheDocument();
+    expect(within(coverageSection!).getByRole("button", { name: "全部 5" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(within(coverageSection!).getByRole("button", { name: "A股 3" })).toBeInTheDocument();
+    expect(within(coverageSection!).getByRole("button", { name: "其他 2" })).toBeInTheDocument();
+
+    const defaultRows = within(coverageSection!).getAllByTestId("node-library-company-row");
+    expect(defaultRows[0]).toHaveTextContent("源杰科技");
+    expect(defaultRows[0]).toHaveTextContent("A股");
     expect(within(coverageSection!).getByText("源杰科技")).toBeInTheDocument();
-    expect(within(coverageSection!).getByText("688498.SH · SSE STAR · CN")).toBeInTheDocument();
-    expect(within(coverageSection!).getByRole("heading", { name: "其他" })).toBeInTheDocument();
+    expect(within(coverageSection!).getByText("688498.SH · SSE STAR")).toBeInTheDocument();
     expect(within(coverageSection!).getByText("Coherent")).toBeInTheDocument();
+
+    fireEvent.click(within(coverageSection!).getByRole("button", { name: "A股 3" }));
+    expect(within(coverageSection!).getByText("源杰科技")).toBeInTheDocument();
+    expect(within(coverageSection!).queryByText("Coherent")).not.toBeInTheDocument();
+
+    fireEvent.click(within(coverageSection!).getByRole("button", { name: "其他 2" }));
+    expect(within(coverageSection!).getByText("Coherent")).toBeInTheDocument();
+    expect(within(coverageSection!).queryByText("源杰科技")).not.toBeInTheDocument();
   });
 
   it("states market and supply data completeness on their own pages", () => {
@@ -321,17 +346,16 @@ describe("AtlasApp", () => {
     expect(screen.getByText("供应关系数据待补全")).toBeInTheDocument();
   });
 
-  it("opens investable node details from the node library while leaving concept nodes local", () => {
+  it("keeps investable node library details local without a duplicate detail action", () => {
     renderAtlas(new URLSearchParams("layer=interconnect&mode=supply&stage=optical-interconnect"));
 
     fireEvent.click(screen.getByRole("button", { name: /节点库/ }));
     fireEvent.click(screen.getByTestId("library-node-cpo-node"));
 
     expect(screen.getByRole("complementary", { name: "节点详情" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "打开节点详情" })).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole("button", { name: "打开节点详情" }));
-    expect(screen.getByRole("dialog", { name: "共封装光学" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "投资节点资料" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "打开节点详情" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: "共封装光学" })).not.toBeInTheDocument();
   });
 
   it("shows equipment as an upstream stage and as manufacturing enablement", () => {

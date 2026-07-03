@@ -772,6 +772,37 @@ const getSubnodeCoverageKey = (
 const isAshareCompany = (company: AtlasCompany | undefined) =>
   company?.market === "CN" && /\.(SH|SZ|BJ)$/.test(company.ticker);
 
+type CoverageMarketFilter = "all" | "ashare" | "other";
+
+const coverageMarketFilters: readonly {
+  id: CoverageMarketFilter;
+  label: string;
+}[] = [
+  { id: "all", label: "全部" },
+  { id: "ashare", label: "A股" },
+  { id: "other", label: "其他" },
+];
+
+const getCompanyMarketLabel = (company: AtlasCompany | undefined) => {
+  if (!company) return "其他";
+  if (isAshareCompany(company)) return "A股";
+  if (company.market === "US") return "美股";
+  if (company.market === "HK") return "港股";
+  if (company.market === "TW") return "台股";
+  if (company.market === "JP") return "日股";
+  if (company.market === "KR") return "韩股";
+  if (company.market === "EU") return "欧股";
+  if (company.market === "PRIVATE") return "非上市";
+  return "其他";
+};
+
+const getCompanyTickerLabel = (company: AtlasCompany | undefined) => {
+  if (!company) return "";
+  return company.exchange && company.exchange !== "PRIVATE"
+    ? `${company.ticker} · ${company.exchange}`
+    : company.ticker;
+};
+
 interface RealNodeStageAppearance {
   stageId: AtlasStageId;
   stageName: string;
@@ -828,7 +859,6 @@ function NodeLibraryPanel({
   selectedNodeId,
   onSelectStage,
   onOpenStageInCanvas,
-  onSelectNode,
 }: {
   nodes: readonly AtlasNode[];
   companies: readonly AtlasCompany[];
@@ -837,7 +867,6 @@ function NodeLibraryPanel({
   selectedNodeId: string | null;
   onSelectStage: (stageId: AtlasStageId) => void;
   onOpenStageInCanvas: (stageId: AtlasStageId) => void;
-  onSelectNode: (nodeId: string) => void;
 }) {
   const nodeById = useMemo(
     () => new Map(nodes.map((node) => [node.id, node])),
@@ -873,6 +902,8 @@ function NodeLibraryPanel({
     [nodeById, selectedStage],
   );
   const [selectedItemKey, setSelectedItemKey] = useState<string | null>(null);
+  const [coverageMarketFilter, setCoverageMarketFilter] =
+    useState<CoverageMarketFilter>("all");
 
   useEffect(() => {
     const selectedRealNodeItem = selectedNodeId
@@ -892,16 +923,16 @@ function NodeLibraryPanel({
 
   const selectedItem =
     stageItems.find((item) => item.key === selectedItemKey) ?? stageItems[0];
+
+  useEffect(() => {
+    setCoverageMarketFilter("all");
+  }, [selectedItem?.key]);
+
   const selectedRealNode = selectedItem?.realNode;
   const selectedRealNodeAppearances = selectedRealNode
     ? realNodeAppearancesById.get(selectedRealNode.id) ?? []
     : [];
   const selectedIsCrossStage = isCrossStageRealNode(selectedRealNodeAppearances);
-  const selectedCompanies = selectedRealNode
-    ? selectedRealNode.companyIds
-        .map((companyId) => companyById.get(companyId))
-        .filter((company): company is AtlasCompany => Boolean(company))
-    : [];
   const getCoveragesForSubnode = (
     stageId: AtlasStageId,
     groupId: string,
@@ -926,20 +957,31 @@ function NodeLibraryPanel({
         selectedItem.node.id,
       )
     : [];
-  const selectedCoverageGroups = [
-    {
-      title: "A股",
-      coverages: selectedCoverages.filter((coverage) =>
-        isAshareCompany(companyById.get(coverage.companyId)),
-      ),
-    },
-    {
-      title: "其他",
-      coverages: selectedCoverages.filter(
-        (coverage) => !isAshareCompany(companyById.get(coverage.companyId)),
-      ),
-    },
-  ].filter(({ coverages }) => coverages.length > 0);
+  const selectedCoverageItems = selectedCoverages.map((coverage) => {
+    const company = companyById.get(coverage.companyId);
+    return {
+      coverage,
+      company,
+      isAshare: isAshareCompany(company),
+    };
+  });
+  const selectedCoverageCounts = {
+    all: selectedCoverageItems.length,
+    ashare: selectedCoverageItems.filter((item) => item.isAshare).length,
+    other: selectedCoverageItems.filter((item) => !item.isAshare).length,
+  };
+  const visibleCoverageItems = selectedCoverageItems
+    .filter((item) => {
+      if (coverageMarketFilter === "ashare") return item.isAshare;
+      if (coverageMarketFilter === "other") return !item.isAshare;
+      return true;
+    })
+    .toSorted((left, right) => {
+      if (coverageMarketFilter === "all" && left.isAshare !== right.isAshare) {
+        return left.isAshare ? -1 : 1;
+      }
+      return left.coverage.rank - right.coverage.rank;
+    });
   const selectedCoverageStats = getStageCoverageStats(selectedStage);
   const selectedStageStats = {
     groupCount: selectedStage.groups.length,
@@ -956,7 +998,7 @@ function NodeLibraryPanel({
           <h1>节点库</h1>
           <p>
             细分节点索引与主界面 9 个模块共用同一份 stageId / nodeId；
-            概念节点用于理解流程，可投资节点可继续打开公司与证据详情。
+            概念节点用于理解流程，可投资节点显示技术资料与代表公司覆盖。
           </p>
         </div>
         <div className="node-library-summary" aria-label="节点库统计">
@@ -1179,45 +1221,45 @@ function NodeLibraryPanel({
                 </section>
               ) : null}
               {selectedCoverages.length ? (
-                <section>
-                  <h3>子节点覆盖公司</h3>
-                  <div className="node-library-coverage-list">
-                    {selectedCoverageGroups.map((group) => (
-                      <div key={group.title} className="node-library-coverage-group">
-                        <h4>{group.title}</h4>
-                        <div className="node-library-coverage-group-list">
-                          {group.coverages.map((coverage) => {
-                            const company = companyById.get(coverage.companyId);
-                            return (
-                              <article key={coverage.id}>
-                                <header>
-                                  <strong>{company?.name ?? coverage.companyId}</strong>
-                                  <small>
-                                    {company
-                                      ? `${company.ticker} · ${company.exchange} · ${company.market}`
-                                      : coverage.companyId}
-                                  </small>
-                                </header>
-                                <div className="node-library-coverage-tags">
-                                  <span>#{coverage.rank}</span>
-                                  <span>{coverage.priority}</span>
-                                  <span>{coverage.relevance}</span>
-                                  <span>{coverage.evidenceLevel} 级证据</span>
-                                </div>
-                                <p>{coverage.role}</p>
-                                {coverage.marketShareNote ? (
-                                  <small>{coverage.marketShareNote}</small>
-                                ) : null}
-                                {coverage.marketCapNote ? (
-                                  <small>{coverage.marketCapNote}</small>
-                                ) : null}
-                              </article>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    ))}
+                <section className="node-library-coverage-section">
+                  <div className="node-library-coverage-heading">
+                    <h3>代表公司</h3>
+                    <div
+                      className="node-library-market-tabs"
+                      role="group"
+                      aria-label="代表公司市场筛选"
+                    >
+                      {coverageMarketFilters.map((filter) => (
+                        <button
+                          key={filter.id}
+                          type="button"
+                          aria-pressed={coverageMarketFilter === filter.id}
+                          disabled={selectedCoverageCounts[filter.id] === 0}
+                          onClick={() => setCoverageMarketFilter(filter.id)}
+                        >
+                          <span>{filter.label}</span>
+                          <strong>{selectedCoverageCounts[filter.id]}</strong>
+                        </button>
+                      ))}
+                    </div>
                   </div>
+                  <ul className="node-library-coverage-list">
+                    {visibleCoverageItems.map(({ coverage, company }, index) => (
+                      <li key={coverage.id} data-testid="node-library-company-row">
+                        <span className="node-library-coverage-rank">
+                          #{index + 1}
+                        </span>
+                        <div>
+                          <header>
+                            <strong>{company?.name ?? coverage.companyId}</strong>
+                            <small>{getCompanyTickerLabel(company) || coverage.companyId}</small>
+                            <em>{getCompanyMarketLabel(company)}</em>
+                          </header>
+                          <p>{coverage.role}</p>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
                 </section>
               ) : null}
               {selectedRealNode ? (
@@ -1227,24 +1269,6 @@ function NodeLibraryPanel({
                     <p>{selectedRealNode.summary}</p>
                     <small>{selectedRealNode.technology}</small>
                   </section>
-                  <section>
-                    <h3>代表公司</h3>
-                    <div className="node-library-company-list">
-                      {selectedCompanies.map((company) => (
-                        <span key={company.id}>
-                          {company.name}
-                          <small>{company.ticker}</small>
-                        </span>
-                      ))}
-                    </div>
-                  </section>
-                  <button
-                    type="button"
-                    className="node-library-primary-action"
-                    onClick={() => onSelectNode(selectedRealNode.id)}
-                  >
-                    打开节点详情
-                  </button>
                 </>
               ) : (
                 <section>
@@ -1302,7 +1326,6 @@ function WorkspaceDataPanel({
         selectedNodeId={selectedNodeId}
         onSelectStage={onSelectStage}
         onOpenStageInCanvas={onOpenStageInCanvas}
-        onSelectNode={onSelectNode}
       />
     );
   }
