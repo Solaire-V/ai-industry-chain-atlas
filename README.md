@@ -42,7 +42,39 @@ SUPABASE_URL=https://your-project-ref.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=your-server-side-key
 ```
 
+行情刷新端点默认关闭真实 provider。仅启用受保护入口时：
+
+```env
+CRON_SECRET=your-refresh-secret
+MARKET_DATA_PROVIDER=disabled
+```
+
+`ATLAS_CRON_SECRET` 可作为项目级额外密钥；如果同时配置，`CRON_SECRET` 和 `ATLAS_CRON_SECRET` 都可用于授权刷新。
+
 不要把 `.env.local`、service role key、行情源 API key 提交到仓库。
+
+## 行情刷新接口
+
+本阶段只提供受保护刷新框架，不接真实行情源。接口：
+
+```text
+GET  /api/atlas/admin/refresh-market
+POST /api/atlas/admin/refresh-market
+```
+
+- `GET`：预留给 Vercel Cron。Vercel Cron 会请求生产部署 URL 的配置路径。
+- `POST`：预留给手工脚本或后台按钮。
+- 两者都必须带 `Authorization: Bearer <CRON_SECRET>`。
+- `?dryRun=1` 只检查鉴权、provider 状态和公司数量，不写入行情表。
+
+本地 dry-run 示例：
+
+```bash
+curl -X POST "http://localhost:3000/api/atlas/admin/refresh-market?dryRun=1" \
+  -H "Authorization: Bearer $CRON_SECRET"
+```
+
+当前响应会是 `dry_run`、`provider_disabled` 或 `provider_not_implemented`；真实行情源接入后才会写入 `market_snapshots` 和 `update_runs`。
 
 ## 数据库初始化
 
@@ -83,6 +115,21 @@ npm run build
 2. 在 Vercel 导入 GitHub 仓库。
 3. 在 Vercel Project Settings 配置服务端环境变量。
 4. 部署后检查首页、公司库、行情数据、供需关系和 `/api/atlas/status`。
+
+未来启用 Vercel Cron 时再添加 `vercel.json`，例如：
+
+```json
+{
+  "crons": [
+    {
+      "path": "/api/atlas/admin/refresh-market",
+      "schedule": "0 22 * * *"
+    }
+  ]
+}
+```
+
+Vercel Cron 使用 UTC 时间；启用前需要先配置 `CRON_SECRET` 和真实 `MARKET_DATA_PROVIDER`。
 
 ## 说明
 
