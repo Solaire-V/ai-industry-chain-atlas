@@ -5,6 +5,9 @@ export interface MarketRefreshEnv {
   ATLAS_CRON_SECRET?: string;
   CRON_SECRET?: string;
   MARKET_DATA_PROVIDER?: string;
+  HITHINK_FUYAO_API_KEY?: string;
+  FUYAO_TOKEN?: string;
+  API_KEY?: string;
 }
 
 export interface HandleMarketRefreshInput {
@@ -29,6 +32,9 @@ const configuredRefreshSecrets = (env: MarketRefreshEnv) =>
 
 const selectedMarketDataProvider = (env: MarketRefreshEnv) =>
   (env.MARKET_DATA_PROVIDER ?? "disabled").trim().toLowerCase() || "disabled";
+
+const hithinkFuyaoApiKey = (env: MarketRefreshEnv) =>
+  (env.HITHINK_FUYAO_API_KEY ?? env.FUYAO_TOKEN ?? env.API_KEY ?? "").trim();
 
 const readBearerToken = (authorization: string | null) => {
   if (!authorization) return null;
@@ -152,6 +158,23 @@ export const handleMarketRefresh = async ({
       ...context,
       wouldWrite: false,
     });
+  }
+
+  if (context.provider === "hithink-fuyao" || context.provider === "fuyao") {
+    if (!hithinkFuyaoApiKey(env)) {
+      return json(
+        {
+          status: "skipped",
+          code: "provider_not_configured",
+          ...context,
+          provider: "hithink-fuyao",
+          missingEnv: ["HITHINK_FUYAO_API_KEY"],
+          acceptedEnv: ["HITHINK_FUYAO_API_KEY", "FUYAO_TOKEN", "API_KEY"],
+          wouldWrite: false,
+        },
+        { status: 503 },
+      );
+    }
   }
 
   return json(

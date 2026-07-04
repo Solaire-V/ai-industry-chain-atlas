@@ -40,6 +40,9 @@ describe("/api/atlas/admin/refresh-market", () => {
     delete process.env.ATLAS_CRON_SECRET;
     delete process.env.CRON_SECRET;
     delete process.env.MARKET_DATA_PROVIDER;
+    delete process.env.FUYAO_TOKEN;
+    delete process.env.HITHINK_FUYAO_API_KEY;
+    delete process.env.API_KEY;
   });
 
   afterEach(() => {
@@ -180,6 +183,29 @@ describe("/api/atlas/admin/refresh-market", () => {
       companyCount: verticalSlice.companies.length,
     });
     expect(JSON.stringify(body)).not.toContain("server-refresh-secret");
+  });
+
+  it("recognizes the HiThink Fuyao provider and requires its API key before live refresh", async () => {
+    process.env.ATLAS_CRON_SECRET = "server-refresh-secret";
+    process.env.MARKET_DATA_PROVIDER = "hithink-fuyao";
+    getSnapshot.mockResolvedValueOnce(verticalSlice);
+    const { POST } = await import("@/app/api/atlas/admin/refresh-market/route");
+
+    const response = await POST(
+      request(refreshUrl, { token: "server-refresh-secret" }),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(503);
+    expect(body).toMatchObject({
+      status: "skipped",
+      code: "provider_not_configured",
+      provider: "hithink-fuyao",
+      companyCount: verticalSlice.companies.length,
+      missingEnv: ["HITHINK_FUYAO_API_KEY"],
+    });
+    expect(JSON.stringify(body)).not.toContain("server-refresh-secret");
+    expect(getSnapshot).toHaveBeenCalledTimes(1);
   });
 
   it("returns 405 for methods that cannot trigger a refresh", async () => {

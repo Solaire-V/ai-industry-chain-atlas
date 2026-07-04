@@ -49,13 +49,22 @@ CRON_SECRET=your-refresh-secret
 MARKET_DATA_PROVIDER=disabled
 ```
 
+A 股主 provider 候选使用同花顺金融数据 API / Fuyao：
+
+```env
+MARKET_DATA_PROVIDER=hithink-fuyao
+HITHINK_FUYAO_API_KEY=your-fuyao-key
+```
+
+也兼容 `FUYAO_TOKEN` 或 `API_KEY`。推荐项目内统一使用 `HITHINK_FUYAO_API_KEY`，避免和其他服务的通用 `API_KEY` 混淆。
+
 `ATLAS_CRON_SECRET` 可作为项目级额外密钥；如果同时配置，`CRON_SECRET` 和 `ATLAS_CRON_SECRET` 都可用于授权刷新。
 
 不要把 `.env.local`、service role key、行情源 API key 提交到仓库。
 
 ## 行情刷新接口
 
-本阶段只提供受保护刷新框架，不接真实行情源。接口：
+刷新接口已预留 HiThink/Fuyao A 股行情 provider。没有 provider key 时不会访问外部网络，也不会写入行情表。接口：
 
 ```text
 GET  /api/atlas/admin/refresh-market
@@ -74,7 +83,7 @@ curl -X POST "http://localhost:3000/api/atlas/admin/refresh-market?dryRun=1" \
   -H "Authorization: Bearer $CRON_SECRET"
 ```
 
-当前响应会是 `dry_run`、`provider_disabled` 或 `provider_not_implemented`；真实行情源接入后才会写入 `market_snapshots` 和 `update_runs`。
+当前响应会是 `dry_run`、`provider_disabled`、`provider_not_configured` 或 `provider_not_implemented`。HiThink/Fuyao 当前用于 A 股行情快照字段映射；新闻、公告全文、研报不在该 provider 能力内，后续应单独接公告/事件 provider。
 
 ## 数据库初始化
 
