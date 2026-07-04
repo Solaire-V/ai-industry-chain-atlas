@@ -169,6 +169,14 @@ const toNumber = (value: number | string | null | undefined) => {
   return Number.isFinite(number) ? number : null;
 };
 
+const toIsoDateTime = (value: string) => {
+  const time = Date.parse(value);
+  return Number.isFinite(time) ? new Date(time).toISOString() : value;
+};
+
+const optionalIsoDateTime = (value: string | null) =>
+  value ? toIsoDateTime(value) : undefined;
+
 const stableRoleId = (
   nodeId: string,
   companyId: string,
@@ -282,7 +290,7 @@ export const mapSupabaseRowsToAtlasSnapshot = (
     url: source.url,
     publisher: source.publisher,
     publishedAt: source.published_at ?? undefined,
-    checkedAt: source.checked_at,
+    checkedAt: toIsoDateTime(source.checked_at),
   }));
 
   const industryEdges = published(rows.industryEdges).map((edge) => {
@@ -352,8 +360,8 @@ export const mapSupabaseRowsToAtlasSnapshot = (
         price: toNumber(snapshot.price) ?? 0,
         changePct: toNumber(snapshot.change_pct) ?? 0,
         currency: snapshot.currency,
-        tradedAt: snapshot.traded_at,
-        fetchedAt: snapshot.fetched_at,
+        tradedAt: toIsoDateTime(snapshot.traded_at),
+        fetchedAt: toIsoDateTime(snapshot.fetched_at),
         delayMinutes: snapshot.delay_minutes,
         ttmEps: toNumber(snapshot.ttm_eps),
         ttmPe: toNumber(snapshot.ttm_pe),
@@ -362,7 +370,7 @@ export const mapSupabaseRowsToAtlasSnapshot = (
         ps: toNumber(snapshot.ps) ?? undefined,
         turnover: toNumber(snapshot.turnover) ?? undefined,
         freshnessSource: snapshot.freshness_source ?? undefined,
-        cachedAt: snapshot.cached_at ?? undefined,
+        cachedAt: optionalIsoDateTime(snapshot.cached_at),
         error: snapshot.error ?? undefined,
       };
     });

@@ -231,6 +231,29 @@ describe("supabase atlas repository mapping", () => {
     });
   });
 
+  it("normalizes Supabase timestamptz offsets into atlas datetime strings", () => {
+    const snapshot = mapSupabaseRowsToAtlasSnapshot({
+      ...rows,
+      sources: rows.sources.map((source) => ({
+        ...source,
+        checked_at: "2026-07-04T00:00:00+00:00",
+      })),
+      marketSnapshots: rows.marketSnapshots.map((marketSnapshot) => ({
+        ...marketSnapshot,
+        traded_at: "2026-07-01T03:00:00+00:00",
+        fetched_at: "2026-07-01T03:01:00+00:00",
+      })),
+    });
+
+    expect(snapshot.sources[0]?.checkedAt).toBe("2026-07-04T00:00:00.000Z");
+    expect(snapshot.marketSnapshots[0]?.tradedAt).toBe(
+      "2026-07-01T03:00:00.000Z",
+    );
+    expect(snapshot.marketSnapshots[0]?.fetchedAt).toBe(
+      "2026-07-01T03:01:00.000Z",
+    );
+  });
+
   it("keeps the fixture repository as the default data source", async () => {
     const repository = createAtlasRepository({});
     const snapshot = await repository.getSnapshot();
