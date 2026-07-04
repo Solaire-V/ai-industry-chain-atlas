@@ -254,6 +254,53 @@ describe("supabase atlas repository mapping", () => {
     );
   });
 
+  it("skips Supabase subnode coverages that are newer than the deployed stage map", () => {
+    const knownCoverage = rows.subnodeCompanyCoverages[0];
+    expect(knownCoverage).toBeDefined();
+    if (!knownCoverage) throw new Error("missing test coverage fixture");
+
+    const snapshot = mapSupabaseRowsToAtlasSnapshot({
+      ...rows,
+      subnodeCompanyCoverages: [
+        ...rows.subnodeCompanyCoverages,
+        {
+          ...knownCoverage,
+          id: "coverage-uuid-future-subnode",
+          slug: "coverage-future-subnode",
+          stage_id: "future-stage",
+          group_id: "future-group",
+          subnode_id: "future-subnode",
+          rank: 1,
+        },
+        {
+          ...knownCoverage,
+          id: "coverage-uuid-future-group",
+          slug: "coverage-future-group",
+          group_id: "future-group",
+          subnode_id: "future-subnode",
+          rank: 2,
+        },
+        {
+          ...knownCoverage,
+          id: "coverage-uuid-future-node",
+          slug: "coverage-future-node",
+          subnode_id: "future-subnode",
+          rank: 3,
+        },
+      ],
+      subnodeCompanyCoverageSources: [
+        ...rows.subnodeCompanyCoverageSources,
+        {
+          coverage_id: "coverage-uuid-future-subnode",
+          source_id: "source-uuid-coverage",
+        },
+      ],
+    });
+
+    expect(snapshot.subnodeCompanyCoverages).toHaveLength(1);
+    expect(snapshot.subnodeCompanyCoverages[0]?.id).toBe("coverage-cpo-broadcom");
+  });
+
   it("keeps the fixture repository as the default data source", async () => {
     const repository = createAtlasRepository({});
     const snapshot = await repository.getSnapshot();

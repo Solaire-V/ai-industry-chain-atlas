@@ -2,6 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 
 import { atlasSnapshotSchema, type AtlasSnapshot } from "@/lib/atlas/schema";
 import type { AtlasRepository } from "@/lib/atlas/repository";
+import { atlasStageById, type AtlasStageId } from "@/lib/atlas/stage-map";
 
 export interface AtlasRepositoryEnv {
   [key: string]: string | undefined;
@@ -191,6 +192,12 @@ const stableRoleId = (
   return `${nodeId}-${companyId}-${suffix}`;
 };
 
+const isKnownSubnodeCoverage = (coverage: DbSubnodeCompanyCoverage) => {
+  const stage = atlasStageById.get(coverage.stage_id as AtlasStageId);
+  const group = stage?.groups.find(({ id }) => id === coverage.group_id);
+  return Boolean(group?.nodes.some(({ id }) => id === coverage.subnode_id));
+};
+
 export const mapSupabaseRowsToAtlasSnapshot = (
   rows: SupabaseAtlasRows,
 ): AtlasSnapshot => {
@@ -203,11 +210,8 @@ export const mapSupabaseRowsToAtlasSnapshot = (
   const nodeSlugByUuid = new Map(
     published(rows.industryNodes).map((node) => [node.id, node.slug]),
   );
-  const coverageByUuid = new Map(
-    published(rows.subnodeCompanyCoverages).map((coverage) => [
-      coverage.id,
-      coverage,
-    ]),
+  const coverageRows = published(rows.subnodeCompanyCoverages).filter(
+    isKnownSubnodeCoverage,
   );
 
   const evidenceSources = (
@@ -324,29 +328,27 @@ export const mapSupabaseRowsToAtlasSnapshot = (
     };
   });
 
-  const subnodeCompanyCoverages = published(rows.subnodeCompanyCoverages).map(
-    (coverage) => {
-      const companyId = companySlugByUuid.get(coverage.company_id);
-      if (!companyId) {
-        throw new Error(`dangling subnode_company_coverages row: ${coverage.id}`);
-      }
-      return {
-        id: coverage.slug,
-        stageId: coverage.stage_id,
-        groupId: coverage.group_id,
-        subnodeId: coverage.subnode_id,
-        companyId,
-        rank: coverage.rank,
-        priority: coverage.priority,
-        relevance: coverage.relevance,
-        evidenceLevel: coverage.evidence_level,
-        role: coverage.role,
-        marketShareNote: coverage.market_share_note ?? undefined,
-        marketCapNote: coverage.market_cap_note ?? undefined,
-        sourceIds: coverageSources(coverage.id),
-      };
-    },
-  );
+  const subnodeCompanyCoverages = coverageRows.map((coverage) => {
+    const companyId = companySlugByUuid.get(coverage.company_id);
+    if (!companyId) {
+      throw new Error(`dangling subnode_company_coverages row: ${coverage.id}`);
+    }
+    return {
+      id: coverage.slug,
+      stageId: coverage.stage_id,
+      groupId: coverage.group_id,
+      subnodeId: coverage.subnode_id,
+      companyId,
+      rank: coverage.rank,
+      priority: coverage.priority,
+      relevance: coverage.relevance,
+      evidenceLevel: coverage.evidence_level,
+      role: coverage.role,
+      marketShareNote: coverage.market_share_note ?? undefined,
+      marketCapNote: coverage.market_cap_note ?? undefined,
+      sourceIds: coverageSources(coverage.id),
+    };
+  });
 
   const marketSnapshots = rows.marketSnapshots
     .filter(({ company_id }) => companySlugByUuid.has(company_id))
