@@ -54,6 +54,9 @@ const exchangeSuffixByExchange: Record<string, "SH" | "SZ" | "BJ" | undefined> =
 const isFiniteNumber = (value: unknown): value is number =>
   typeof value === "number" && Number.isFinite(value);
 
+const toEpochMilliseconds = (timestamp: number) =>
+  timestamp < 10_000_000_000 ? timestamp * 1000 : timestamp;
+
 const chunk = <T>(values: readonly T[], size: number) => {
   const chunks: T[][] = [];
   for (let index = 0; index < values.length; index += size) {
@@ -107,7 +110,7 @@ export const mapFuyaoSnapshotItemToQuote = ({
   }
 
   const tradedAt = dataTimestamp
-    ? new Date(dataTimestamp)
+    ? new Date(toEpochMilliseconds(dataTimestamp))
     : new Date(fetchedAt.getTime() - DEFAULT_DELAY_MINUTES * 60_000);
   const delayMinutes = Math.max(
     1,

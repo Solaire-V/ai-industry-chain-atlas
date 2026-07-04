@@ -76,6 +76,23 @@ describe("HiThink Fuyao A-share provider", () => {
     });
   });
 
+  it("normalizes Fuyao second-based timestamps before mapping traded time", () => {
+    const quote = mapFuyaoSnapshotItemToQuote({
+      company: cnCompany,
+      item: {
+        thscode: "300308.SZ",
+        ticker: "300308",
+        last_price: 138.25,
+        price_change_ratio_pct: 3.0712,
+      },
+      dataTimestamp: 1783065600,
+      fetchedAt: new Date("2026-07-04T08:20:00.000Z"),
+    });
+
+    expect(quote.tradedAt).toBe("2026-07-03T08:00:00.000Z");
+    expect(quote.delayMinutes).toBeGreaterThan(0);
+  });
+
   it("fetches only A-share companies and sends the API key as an X-api-key header", async () => {
     const fetchFn = vi.fn(async (_url: string | URL | Request, init?: RequestInit) => {
       expect(init?.headers).toEqual({ "X-api-key": "fuyao-secret" });
