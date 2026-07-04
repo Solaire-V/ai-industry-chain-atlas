@@ -83,7 +83,7 @@ curl -X POST "http://localhost:3000/api/atlas/admin/refresh-market?dryRun=1" \
   -H "Authorization: Bearer $CRON_SECRET"
 ```
 
-当前响应会是 `dry_run`、`provider_disabled`、`provider_not_configured`、`market_update_succeeded`、`market_update_failed` 或 `provider_not_implemented`。配置 `MARKET_DATA_PROVIDER=hithink-fuyao`、Fuyao key、`SUPABASE_URL` 和 `SUPABASE_SERVICE_ROLE_KEY` 后，刷新接口会通过统一更新链路写入 `market_snapshots` 并记录 `update_runs`。HiThink/Fuyao 当前用于 A 股行情快照字段映射；新闻、公告全文、研报不在该 provider 能力内，后续应单独接公告/事件 provider。
+当前响应会是 `dry_run`、`provider_disabled`、`provider_not_configured`、`market_update_succeeded`、`market_update_failed` 或 `provider_not_implemented`。配置 `MARKET_DATA_PROVIDER=hithink-fuyao`、Fuyao key、`SUPABASE_URL` 和 `SUPABASE_SERVICE_ROLE_KEY` 后，刷新接口会通过统一更新链路写入 `market_snapshots` 并记录 `update_runs`。HiThink/Fuyao 当前用于沪深 A 股行情快照字段映射；北交所代码先跳过，待覆盖和限流策略验证后再打开。新闻、公告全文、研报不在该 provider 能力内，后续应单独接公告/事件 provider。
 
 ## 数据库初始化
 

@@ -49,8 +49,6 @@ const exchangeSuffixByExchange: Record<string, "SH" | "SZ" | "BJ" | undefined> =
   SSE: "SH",
   SHSE: "SH",
   SZSE: "SZ",
-  BSE: "BJ",
-  BJSE: "BJ",
 };
 
 const isFiniteNumber = (value: unknown): value is number =>
@@ -64,11 +62,28 @@ const chunk = <T>(values: readonly T[], size: number) => {
   return chunks;
 };
 
+class FuyaoApiError extends Error {
+  constructor(
+    public readonly code: number,
+    message: string,
+    public readonly requestId?: string,
+  ) {
+    super(
+      `Fuyao API error code=${code} request_id=${requestId ?? "unknown"} message=${message}`,
+    );
+  }
+}
+
+const isUnknownThscodeError = (error: unknown) =>
+  error instanceof FuyaoApiError &&
+  error.code === 1002 &&
+  /unknown thscode/i.test(error.message);
+
 export const toFuyaoThscode = (company: AtlasCompany) => {
   if (company.market !== "CN") return null;
 
   const ticker = company.ticker.trim().toUpperCase();
-  if (/^\d{6}\.(SH|SZ|BJ)$/.test(ticker)) return ticker;
+  if (/^\d{6}\.(SH|SZ)$/.test(ticker)) return ticker;
 
   if (/^\d{6}$/.test(ticker)) {
     const suffix = exchangeSuffixByExchange[company.exchange.toUpperCase()];
@@ -121,8 +136,10 @@ const parseFuyaoEnvelope = async (response: Response): Promise<FuyaoEnvelope> =>
 
   const payload = (await response.json()) as FuyaoEnvelope;
   if (payload.code !== 0) {
-    throw new Error(
-      `Fuyao API error code=${payload.code} request_id=${payload.request_id ?? "unknown"} message=${payload.message ?? ""}`,
+    throw new FuyaoApiError(
+      payload.code,
+      payload.message ?? "",
+      payload.request_id,
     );
   }
   return payload;
@@ -146,18 +163,35 @@ export const createHithinkFuyaoMarketDataProvider = ({
     if (thscodes.length === 0) return [];
 
     const quotes: MarketQuote[] = [];
-    for (const thscodeChunk of chunk(thscodes, CHUNK_SIZE)) {
+    const fetchChunk = async (thscodeChunk: readonly string[]): Promise<void> => {
       const url = new URL("/api/a-share/prices/snapshot", baseUrl);
       url.searchParams.set("thscodes", thscodeChunk.join(","));
-      const response = await fetchFn(url, {
-        headers: { "X-api-key": apiKey },
-      });
-      const payload = await parseFuyaoEnvelope(response);
+      let payload: FuyaoEnvelope;
+      try {
+        const response = await fetchFn(url, {
+          headers: { "X-api-key": apiKey },
+        });
+        payload = await parseFuyaoEnvelope(response);
+      } catch (error) {
+        if (!isUnknownThscodeError(error)) throw error;
+        if (thscodeChunk.length === 1) return;
+        for (const smallerChunk of chunk(thscodeChunk, 1)) {
+          await fetchChunk(smallerChunk);
+        }
+        return;
+      }
+
       const fetchedAt = now();
 
       for (const item of payload.data?.item ?? []) {
         const company = companyByThscode.get(item.thscode.toUpperCase());
         if (!company) continue;
+        if (
+          !isFiniteNumber(item.last_price) ||
+          !isFiniteNumber(item.price_change_ratio_pct)
+        ) {
+          continue;
+        }
         quotes.push(
           mapFuyaoSnapshotItemToQuote({
             company,
@@ -167,6 +201,10 @@ export const createHithinkFuyaoMarketDataProvider = ({
           }),
         );
       }
+    };
+
+    for (const thscodeChunk of chunk(thscodes, CHUNK_SIZE)) {
+      await fetchChunk(thscodeChunk);
     }
 
     return quotes;
