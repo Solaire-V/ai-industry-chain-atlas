@@ -86,11 +86,26 @@ supabase db push
 - `market_snapshots` 有 `market_cap`、`pb`、`ps`、`turnover`、`source_id` 字段。
 - `company_node_roles.slug` 和 `supply_relations.slug` 存在唯一索引。
 
-### 3. 导入当前静态 seed
+### 3. 生成并导入当前静态 seed
 
 先在本地生成 seed SQL，再人工导入 Supabase。
 
-建议后续补一个 CLI 脚本调用 `buildSupabaseSeedSql(verticalSlice)` 输出 SQL 文件。当前不要用手写 SQL 复制业务数据，避免公司和节点映射分叉。
+```bash
+npm run export:supabase-seed
+```
+
+默认输出：
+
+```text
+supabase/seed.sql
+```
+
+`supabase/seed.sql` 是本地生成产物，不进 git。当前不要用手写 SQL 复制业务数据，避免公司和节点映射分叉。
+
+导入方式：
+
+- 如果使用 Supabase SQL Editor：复制 `supabase/seed.sql` 内容执行。
+- 如果使用 `psql`：连接到目标库后执行该文件。
 
 导入后检查：
 

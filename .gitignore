@@ -7,5 +7,6 @@ test-results/
 .worktrees/
 .superpowers/
 *.tsbuildinfo
+supabase/seed.sql
 .env*
 !.env.example
