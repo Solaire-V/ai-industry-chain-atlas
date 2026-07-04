@@ -8,5 +8,6 @@ test-results/
 .superpowers/
 *.tsbuildinfo
 supabase/seed.sql
+docs/
 .env*
 !.env.example
