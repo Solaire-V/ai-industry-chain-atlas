@@ -1,4 +1,4 @@
-import { fixtureAtlasRepository } from "@/lib/atlas/repository";
+import { atlasRepository } from "@/lib/atlas/repository";
 import {
   atlasSnapshotSchema,
   layerSchema,
@@ -108,6 +108,6 @@ export async function GET(request: Request) {
     );
   }
 
-  const snapshot = await fixtureAtlasRepository.getSnapshot();
+  const snapshot = await atlasRepository.getSnapshot();
   return json(filterSnapshotByLayer(snapshot, layer.data));
 }

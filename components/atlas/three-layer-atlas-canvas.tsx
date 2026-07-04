@@ -1,12 +1,23 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 
+import { CompanyLibraryPanel } from "@/components/atlas/company-library-panel";
+import { DataSettingsPanel } from "@/components/atlas/data-settings-panel";
+import { MarketDataPanel } from "@/components/atlas/market-data-panel";
 import { StageNodeButton } from "@/components/atlas/stage-node-button";
+import { SupplyRelationsPanel } from "@/components/atlas/supply-relations-panel";
+import {
+  getCompanyMarketLabel,
+  getCompanyTickerLabel,
+  isAshareCompany,
+  type CompanyMarketFilter,
+} from "@/lib/atlas/company-research";
 import { getNeighborhood } from "@/lib/atlas/graph";
 import type {
   AtlasCompany,
   AtlasIndustryEdge,
   AtlasMarketSnapshot,
   AtlasNode,
+  AtlasSource,
   AtlasSupplyRelation,
   SubnodeCompanyCoverage,
 } from "@/lib/atlas/schema";
@@ -34,6 +45,7 @@ interface ThreeLayerAtlasCanvasProps {
   marketSnapshots: readonly AtlasMarketSnapshot[];
   supplyRelations: readonly AtlasSupplyRelation[];
   subnodeCompanyCoverages: readonly SubnodeCompanyCoverage[];
+  sources: readonly AtlasSource[];
   activeView: AtlasWorkspaceView;
   selectedStageId: AtlasStageId;
   selectedNodeId: string | null;
@@ -769,10 +781,7 @@ const getSubnodeCoverageKey = (
   subnodeId: string,
 ) => `${stageId}\u0000${groupId}\u0000${subnodeId}`;
 
-const isAshareCompany = (company: AtlasCompany | undefined) =>
-  company?.market === "CN" && /\.(SH|SZ|BJ)$/.test(company.ticker);
-
-type CoverageMarketFilter = "all" | "ashare" | "other";
+type CoverageMarketFilter = CompanyMarketFilter;
 
 const coverageMarketFilters: readonly {
   id: CoverageMarketFilter;
@@ -782,26 +791,6 @@ const coverageMarketFilters: readonly {
   { id: "ashare", label: "A股" },
   { id: "other", label: "其他" },
 ];
-
-const getCompanyMarketLabel = (company: AtlasCompany | undefined) => {
-  if (!company) return "其他";
-  if (isAshareCompany(company)) return "A股";
-  if (company.market === "US") return "美股";
-  if (company.market === "HK") return "港股";
-  if (company.market === "TW") return "台股";
-  if (company.market === "JP") return "日股";
-  if (company.market === "KR") return "韩股";
-  if (company.market === "EU") return "欧股";
-  if (company.market === "PRIVATE") return "非上市";
-  return "其他";
-};
-
-const getCompanyTickerLabel = (company: AtlasCompany | undefined) => {
-  if (!company) return "";
-  return company.exchange && company.exchange !== "PRIVATE"
-    ? `${company.ticker} · ${company.exchange}`
-    : company.ticker;
-};
 
 const NODE_COMPANY_PREVIEW_LIMIT = 4;
 
@@ -1217,6 +1206,7 @@ function WorkspaceDataPanel({
   marketSnapshots,
   supplyRelations,
   subnodeCompanyCoverages,
+  sources,
   selectedStageId,
   selectedNodeId,
   onSelectStage,
@@ -1230,6 +1220,7 @@ function WorkspaceDataPanel({
   marketSnapshots: readonly AtlasMarketSnapshot[];
   supplyRelations: readonly AtlasSupplyRelation[];
   subnodeCompanyCoverages: readonly SubnodeCompanyCoverage[];
+  sources: readonly AtlasSource[];
   selectedStageId: AtlasStageId;
   selectedNodeId: string | null;
   onSelectStage: (stageId: AtlasStageId) => void;
@@ -1251,132 +1242,46 @@ function WorkspaceDataPanel({
   }
 
   if (view === "companies") {
-    const mountedRoleCount = nodes.reduce(
-      (total, node) => total + node.companyIds.length,
-      0,
-    );
-
     return (
-      <section className="workspace-data-panel" aria-label="公司库">
-        <header>
-          <h1>公司库</h1>
-          <p>公司基本资料独立维护，后续再按节点挂龙头公司、国内外分类和业务标签。</p>
-        </header>
-        <div className="workspace-status-grid" aria-label="公司数据完整度">
-          <article>
-            <strong>{companies.length} 家公司</strong>
-            <small>当前代表公司主数据</small>
-          </article>
-          <article>
-            <strong>{mountedRoleCount} 个节点挂载</strong>
-            <small>公司与节点的当前关联覆盖</small>
-          </article>
-        </div>
-        <div className="workspace-table" role="table" aria-label="代表公司预览">
-          <div role="row">
-            <strong role="columnheader">公司</strong>
-            <strong role="columnheader">代码</strong>
-            <strong role="columnheader">市场</strong>
-            <strong role="columnheader">挂载节点数</strong>
-          </div>
-          {companies.slice(0, 12).map((company) => (
-            <div role="row" key={company.id}>
-              <span role="cell">{company.name}</span>
-              <span role="cell">{company.ticker}</span>
-              <span role="cell">
-                {company.exchange} · {company.market}
-              </span>
-              <span role="cell">
-                {nodes.filter((node) => node.companyIds.includes(company.id)).length}
-              </span>
-            </div>
-          ))}
-        </div>
-      </section>
+      <CompanyLibraryPanel
+        companies={companies}
+        subnodeCompanyCoverages={subnodeCompanyCoverages}
+        marketSnapshots={marketSnapshots}
+        supplyRelations={supplyRelations}
+        sources={sources}
+      />
     );
   }
 
   if (view === "markets") {
     return (
-      <section className="workspace-data-panel" aria-label="行情数据">
-        <header>
-          <h1>行情数据</h1>
-          <p>股价、涨跌幅、市值、PE、PS 与更新时间放在这里，不进入主流程画布。</p>
-        </header>
-        <div className="workspace-status-grid" aria-label="行情数据完整度">
-          <article data-state={marketSnapshots.length ? "ready" : "empty"}>
-            <strong>{marketSnapshots.length} 条行情快照</strong>
-            <small>
-              {marketSnapshots.length ? "已接入行情数据" : "行情源未接入"}
-            </small>
-          </article>
-        </div>
-        <div className="workspace-placeholder-list">
-          {["实时股价", "市盈率 PE", "市值 / PS", "交易所与币种", "更新时间"].map((item) => (
-            <article key={item}>
-              <strong>{item}</strong>
-              <small>待接每日更新数据源</small>
-            </article>
-          ))}
-        </div>
-      </section>
+      <MarketDataPanel
+        companies={companies}
+        marketSnapshots={marketSnapshots}
+      />
     );
   }
 
   if (view === "supply") {
     return (
-      <section className="workspace-data-panel" aria-label="供需关系">
-        <header>
-          <h1>供需关系</h1>
-          <p>这里承接多对多上下游关系，包含关系类型、证据来源和置信度；主画布只保留稳定链路。</p>
-        </header>
-        <div className="workspace-status-grid" aria-label="供需数据完整度">
-          <article>
-            <strong>{edges.length} 条产业链边</strong>
-            <small>节点之间的稳定产业链关系</small>
-          </article>
-          <article data-state={supplyRelations.length > 1 ? "ready" : "partial"}>
-            <strong>{supplyRelations.length} 条公司级供需关系</strong>
-            <small>
-              {supplyRelations.length > 1
-                ? "公司供应关系已接入"
-                : "供应关系数据待补全"}
-            </small>
-          </article>
-        </div>
-        <div className="workspace-table" role="table" aria-label="产业边预览">
-          <div role="row">
-            <strong role="columnheader">上游</strong>
-            <strong role="columnheader">下游</strong>
-            <strong role="columnheader">类型</strong>
-          </div>
-          {edges.slice(0, 14).map((edge) => (
-            <div role="row" key={edge.id}>
-              <span role="cell">{nodes.find((node) => node.id === edge.from)?.name ?? edge.from}</span>
-              <span role="cell">{nodes.find((node) => node.id === edge.to)?.name ?? edge.to}</span>
-              <span role="cell">{relationshipTypeLabels[edge.type]}</span>
-            </div>
-          ))}
-        </div>
-      </section>
+      <SupplyRelationsPanel
+        nodes={nodes}
+        companies={companies}
+        edges={edges}
+        supplyRelations={supplyRelations}
+        sources={sources}
+      />
     );
   }
 
   return (
-    <section className="workspace-data-panel" aria-label="数据设置">
-      <header>
-        <h1>数据设置</h1>
-        <p>后续每日更新、行情接口、公司映射和供应关系数据源统一放在这里配置。</p>
-      </header>
-      <div className="workspace-placeholder-list">
-        {["公司主数据", "行情接口", "供应关系证据", "更新时间策略"].map((item) => (
-          <article key={item}>
-            <strong>{item}</strong>
-            <small>待配置</small>
-          </article>
-        ))}
-      </div>
-    </section>
+    <DataSettingsPanel
+      companies={companies}
+      marketSnapshots={marketSnapshots}
+      supplyRelations={supplyRelations}
+      subnodeCompanyCoverages={subnodeCompanyCoverages}
+      sources={sources}
+    />
   );
 }
 
@@ -1387,6 +1292,7 @@ export function ThreeLayerAtlasCanvas({
   marketSnapshots,
   supplyRelations,
   subnodeCompanyCoverages,
+  sources,
   activeView,
   selectedStageId,
   selectedNodeId,
@@ -1490,6 +1396,7 @@ export function ThreeLayerAtlasCanvas({
             marketSnapshots={marketSnapshots}
             supplyRelations={supplyRelations}
             subnodeCompanyCoverages={subnodeCompanyCoverages}
+            sources={sources}
             selectedStageId={activeStageId}
             selectedNodeId={selectedNodeId}
             onSelectStage={(stageId) => {

@@ -6,6 +6,7 @@ import { atlasSnapshotSchema } from "@/lib/atlas/schema";
 const getSnapshot = vi.fn();
 
 vi.mock("@/lib/atlas/repository", () => ({
+  atlasRepository: { getSnapshot },
   fixtureAtlasRepository: { getSnapshot },
 }));
 

@@ -5,6 +5,10 @@ export interface PresentedMarketSnapshot {
   change: string;
   currency: string;
   pe: string;
+  marketCap: string;
+  pb: string;
+  ps: string;
+  turnover: string;
   freshness: string;
   tradedAt: string;
   fetchedAt: string;
@@ -15,6 +19,12 @@ const finite = (value: number | null): value is number =>
 
 const formatNumber = (value: number, locale: string) =>
   new Intl.NumberFormat(locale, { maximumFractionDigits: 2 }).format(value);
+
+const formatCompactNumber = (value: number, locale: string) =>
+  new Intl.NumberFormat(locale, {
+    maximumFractionDigits: 2,
+    notation: "compact",
+  }).format(value);
 
 const formatTimestamp = (value: string | null | undefined, locale: string) => {
   if (!value) return "N/A";
@@ -32,6 +42,10 @@ export const presentMarketSnapshot = (
       change: "N/A",
       currency: "N/A",
       pe: "N/A",
+      marketCap: "N/A",
+      pb: "N/A",
+      ps: "N/A",
+      turnover: "N/A",
       freshness: "暂无行情数据",
       tradedAt: "N/A",
       fetchedAt: "N/A",
@@ -57,6 +71,22 @@ export const presentMarketSnapshot = (
   const pe = finite(snapshot.ttmEps) && snapshot.ttmEps > 0 &&
       finite(snapshot.ttmPe) && snapshot.ttmPe > 0
     ? formatNumber(snapshot.ttmPe, locale)
+    : "N/A";
+  const marketCapValue = snapshot.marketCap ?? null;
+  const pbValue = snapshot.pb ?? null;
+  const psValue = snapshot.ps ?? null;
+  const turnoverValue = snapshot.turnover ?? null;
+  const marketCap = finite(marketCapValue) && currency !== "N/A"
+    ? `${currency} ${formatCompactNumber(marketCapValue, locale)}`
+    : "N/A";
+  const pb = finite(pbValue)
+    ? formatNumber(pbValue, locale)
+    : "N/A";
+  const ps = finite(psValue)
+    ? formatNumber(psValue, locale)
+    : "N/A";
+  const turnover = finite(turnoverValue) && currency !== "N/A"
+    ? `${currency} ${formatCompactNumber(turnoverValue, locale)}`
     : "N/A";
 
   const cachedTimestamp = snapshot.cachedAt ??
@@ -84,6 +114,10 @@ export const presentMarketSnapshot = (
     change,
     currency,
     pe,
+    marketCap,
+    pb,
+    ps,
+    turnover,
     freshness,
     tradedAt: formatTimestamp(snapshot.tradedAt, locale),
     fetchedAt: formatTimestamp(snapshot.fetchedAt, locale),

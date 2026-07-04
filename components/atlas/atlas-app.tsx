@@ -241,6 +241,7 @@ export function AtlasApp({
         marketSnapshots={initialSnapshot.marketSnapshots}
         supplyRelations={initialSnapshot.supplyRelations}
         subnodeCompanyCoverages={initialSnapshot.subnodeCompanyCoverages}
+        sources={initialSnapshot.sources}
         activeView={query.view}
         selectedStageId={selectedStageId}
         selectedNodeId={selectedNode?.id ?? null}

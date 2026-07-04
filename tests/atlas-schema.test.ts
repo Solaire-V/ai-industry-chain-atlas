@@ -166,13 +166,40 @@ describe("atlas domain contracts", () => {
       freshnessSource: "cached",
       cachedAt: "2026-07-01T07:00:00.000Z",
       error: "upstream timeout",
+      marketCap: 3_000_000_000_000,
+      pb: 40,
+      ps: 25,
+      turnover: 10_000_000_000,
     });
 
     expect(parsed).toMatchObject({
       freshnessSource: "cached",
       cachedAt: "2026-07-01T07:00:00.000Z",
       error: "upstream timeout",
+      marketCap: 3_000_000_000_000,
+      pb: 40,
+      ps: 25,
+      turnover: 10_000_000_000,
     });
+  });
+
+  it.each([
+    ["marketCap", -1],
+    ["pb", 0],
+    ["ps", -1],
+    ["turnover", -1],
+  ] as const)("rejects invalid market metric %s", (field, value) => {
+    const result = marketSnapshotSchema.safeParse({
+      ...validSnapshot.marketSnapshots[0],
+      [field]: value,
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues).toEqual(
+        expect.arrayContaining([expect.objectContaining({ path: [field] })]),
+      );
+    }
   });
 
   it.each([

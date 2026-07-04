@@ -37,6 +37,10 @@ describe("presentMarketSnapshot", () => {
       change: "N/A",
       currency: "N/A",
       pe: "N/A",
+      marketCap: "N/A",
+      pb: "N/A",
+      ps: "N/A",
+      turnover: "N/A",
       freshness: "暂无行情数据",
       tradedAt: "N/A",
       fetchedAt: "N/A",
@@ -96,6 +100,24 @@ describe("presentMarketSnapshot", () => {
       presentMarketSnapshot(snapshot({ changePct: -2.5 })).change,
     ).toBe("-2.5%");
     expect(presentMarketSnapshot(snapshot()).pe).toBe("29.39");
+  });
+
+  it("presents valuation and liquidity fields when local snapshots include them", () => {
+    const presented = presentMarketSnapshot(
+      snapshot({
+        marketCap: 3_000_000_000_000,
+        pb: 40,
+        ps: 25,
+        turnover: 10_000_000_000,
+      }),
+    );
+
+    expect(presented.marketCap).toContain("USD");
+    expect(presented.marketCap).not.toBe("N/A");
+    expect(presented.pb).toBe("40");
+    expect(presented.ps).toBe("25");
+    expect(presented.turnover).toContain("USD");
+    expect(presented.turnover).not.toBe("N/A");
   });
 
   it("formats zero and tiny nonzero changes without inventing a signed zero", () => {
