@@ -9,6 +9,8 @@ import { atlasSnapshotSchema } from "@/lib/atlas/schema";
 
 afterEach(() => {
   cleanup();
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
   vi.useRealTimers();
   window.history.replaceState(null, "", "/");
 });
@@ -415,17 +417,81 @@ describe("AtlasApp", () => {
     expect(within(marketTable).getAllByText(/USD/).length).toBeGreaterThan(1);
   });
 
-  it("renders local data settings without editable secret controls", () => {
+  it("renders data settings with a protected market refresh console", () => {
     renderAtlas(new URLSearchParams("view=settings&layer=interconnect&mode=supply"));
 
     expect(screen.getByRole("heading", { name: "数据设置" })).toBeInTheDocument();
     expect(screen.getByText("本地展示数据")).toBeInTheDocument();
     expect(screen.getByText("Supabase 可切换")).toBeInTheDocument();
-    expect(screen.getByText("每日更新框架")).toBeInTheDocument();
+    expect(screen.getAllByText("行情未接入").length).toBeGreaterThan(0);
     expect(screen.getByText("/api/atlas/status")).toBeInTheDocument();
-    expect(screen.getByText("上线前阻塞项")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "行情刷新" })).toBeInTheDocument();
+    expect(screen.getByLabelText("刷新密钥")).toHaveAttribute("type", "password");
+    expect(screen.getByRole("button", { name: "检查配置" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "刷新写库" })).toBeDisabled();
+    expect(screen.queryByText("上线前阻塞项")).not.toBeInTheDocument();
     expect(screen.queryByText("待配置")).not.toBeInTheDocument();
-    expect(screen.queryByLabelText(/token|密钥|secret/i)).not.toBeInTheDocument();
+  });
+
+  it("triggers dry-run and live market refresh from data settings without exposing the secret", async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      const dryRun = url.includes("dryRun=1");
+      return new Response(
+        JSON.stringify({
+          status: dryRun ? "dry_run" : "succeeded",
+          code: dryRun ? "dry_run" : "market_update_succeeded",
+          provider: "hithink-fuyao",
+          trigger: "manual",
+          companyCount: verticalSlice.companies.length,
+          rowsRead: dryRun ? undefined : 130,
+          rowsWritten: dryRun ? undefined : 130,
+          wouldWrite: !dryRun,
+        }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        },
+      );
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    renderAtlas(new URLSearchParams("view=settings&layer=interconnect&mode=supply"));
+
+    fireEvent.change(screen.getByLabelText("刷新密钥"), {
+      target: { value: "manual-refresh-secret" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "检查配置" }));
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/atlas/admin/refresh-market?dryRun=1",
+        expect.objectContaining({
+          method: "POST",
+          headers: expect.objectContaining({
+            Authorization: "Bearer manual-refresh-secret",
+          }),
+        }),
+      );
+    });
+    expect(screen.getByText("dry_run")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "刷新写库" }));
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenLastCalledWith(
+        "/api/atlas/admin/refresh-market",
+        expect.objectContaining({
+          method: "POST",
+          headers: expect.objectContaining({
+            Authorization: "Bearer manual-refresh-secret",
+          }),
+        }),
+      );
+    });
+    expect(screen.getByText("130 / 130")).toBeInTheDocument();
+    expect(screen.getByText("hithink-fuyao")).toBeInTheDocument();
+    expect(screen.queryByText("manual-refresh-secret")).not.toBeInTheDocument();
   });
 
   it("renders the company library as an investment screener", () => {

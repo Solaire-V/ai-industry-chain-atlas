@@ -125,20 +125,21 @@ npm run build
 3. 在 Vercel Project Settings 配置服务端环境变量。
 4. 部署后检查首页、公司库、行情数据、供需关系和 `/api/atlas/status`。
 
-未来启用 Vercel Cron 时再添加 `vercel.json`，例如：
+已配置 Vercel Cron：
 
 ```json
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
   "crons": [
     {
       "path": "/api/atlas/admin/refresh-market",
-      "schedule": "0 22 * * *"
+      "schedule": "30 12 * * 1-5"
     }
   ]
 }
 ```
 
-Vercel Cron 使用 UTC 时间；启用前需要先配置 `CRON_SECRET` 和真实 `MARKET_DATA_PROVIDER`。
+该计划表示 UTC 工作日 12:30，即北京时间工作日 20:30。Vercel Cron 使用 UTC 时间；生产环境需要配置 `CRON_SECRET`、`MARKET_DATA_PROVIDER=hithink-fuyao`、`HITHINK_FUYAO_API_KEY`、`SUPABASE_URL` 和 `SUPABASE_SERVICE_ROLE_KEY` 后才会真实写库。
 
 ## 说明
 
