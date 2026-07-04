@@ -1,4 +1,14 @@
+import { createClient } from "@supabase/supabase-js";
+
+import {
+  createSupabaseMarketUpdateStore,
+  runMarketSnapshotUpdate,
+  sanitizeUpdateErrorMessage,
+  type MarketUpdateResult,
+} from "@/lib/atlas/market-update";
+import { createHithinkFuyaoMarketDataProvider } from "@/lib/atlas/providers/hithink-fuyao";
 import type { AtlasRepository } from "@/lib/atlas/repository";
+import type { AtlasCompany } from "@/lib/atlas/schema";
 
 export interface MarketRefreshEnv {
   [key: string]: string | undefined;
@@ -8,15 +18,20 @@ export interface MarketRefreshEnv {
   HITHINK_FUYAO_API_KEY?: string;
   FUYAO_TOKEN?: string;
   API_KEY?: string;
+  SUPABASE_URL?: string;
+  NEXT_PUBLIC_SUPABASE_URL?: string;
+  SUPABASE_SERVICE_ROLE_KEY?: string;
 }
 
 export interface HandleMarketRefreshInput {
   request: Request;
   repository: AtlasRepository;
   env?: MarketRefreshEnv;
+  dependencies?: Partial<MarketRefreshDependencies>;
 }
 
 type MarketRefreshTrigger = "manual" | "vercel-cron";
+type SupabaseMarketUpdateClient = Parameters<typeof createSupabaseMarketUpdateStore>[0];
 
 interface RefreshContext {
   provider: string;
@@ -25,16 +40,81 @@ interface RefreshContext {
   companyCount: number;
 }
 
+interface RefreshState extends RefreshContext {
+  companies: readonly AtlasCompany[];
+}
+
+interface SupabaseUpdateConfig {
+  supabaseUrl: string;
+  serviceRoleKey: string;
+}
+
+export interface MarketRefreshDependencies {
+  createHithinkFuyaoMarketDataProvider: typeof createHithinkFuyaoMarketDataProvider;
+  createSupabaseMarketUpdateClient: (
+    supabaseUrl: string,
+    serviceRoleKey: string,
+  ) => SupabaseMarketUpdateClient;
+  createMarketUpdateStore: typeof createSupabaseMarketUpdateStore;
+  runMarketUpdate: typeof runMarketSnapshotUpdate;
+}
+
 const configuredRefreshSecrets = (env: MarketRefreshEnv) =>
   [...new Set([env.ATLAS_CRON_SECRET, env.CRON_SECRET])]
     .map((secret) => (secret ?? "").trim())
     .filter((secret) => secret.length > 0);
 
 const selectedMarketDataProvider = (env: MarketRefreshEnv) =>
-  (env.MARKET_DATA_PROVIDER ?? "disabled").trim().toLowerCase() || "disabled";
+  ((env.MARKET_DATA_PROVIDER ?? "disabled").trim().toLowerCase() || "disabled")
+    .replace(/^fuyao$/, "hithink-fuyao");
 
 const hithinkFuyaoApiKey = (env: MarketRefreshEnv) =>
   (env.HITHINK_FUYAO_API_KEY ?? env.FUYAO_TOKEN ?? env.API_KEY ?? "").trim();
+
+const supabaseUpdateConfig = (env: MarketRefreshEnv) => {
+  const supabaseUrl = (env.SUPABASE_URL ?? env.NEXT_PUBLIC_SUPABASE_URL ?? "")
+    .trim();
+  const serviceRoleKey = (env.SUPABASE_SERVICE_ROLE_KEY ?? "").trim();
+
+  if (!supabaseUrl || !serviceRoleKey) {
+    const missingEnv = [];
+    if (!supabaseUrl) missingEnv.push("SUPABASE_URL");
+    if (!serviceRoleKey) missingEnv.push("SUPABASE_SERVICE_ROLE_KEY");
+    return { missingEnv };
+  }
+
+  return { supabaseUrl, serviceRoleKey, missingEnv: [] };
+};
+
+const createDefaultSupabaseMarketUpdateClient = (
+  supabaseUrl: string,
+  serviceRoleKey: string,
+) => {
+  const createSupabaseClient = createClient as unknown as (
+    supabaseUrl: string,
+    serviceRoleKey: string,
+    options: {
+      auth: {
+        autoRefreshToken: boolean;
+        persistSession: boolean;
+      };
+    },
+  ) => unknown;
+
+  return createSupabaseClient(supabaseUrl, serviceRoleKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  }) as SupabaseMarketUpdateClient;
+};
+
+const defaultDependencies: MarketRefreshDependencies = {
+  createHithinkFuyaoMarketDataProvider,
+  createSupabaseMarketUpdateClient: createDefaultSupabaseMarketUpdateClient,
+  createMarketUpdateStore: createSupabaseMarketUpdateStore,
+  runMarketUpdate: runMarketSnapshotUpdate,
+};
 
 const readBearerToken = (authorization: string | null) => {
   if (!authorization) return null;
@@ -81,7 +161,7 @@ const baseContext = async (
   request: Request,
   repository: AtlasRepository,
   env: MarketRefreshEnv,
-): Promise<RefreshContext> => {
+): Promise<RefreshState> => {
   const snapshot = await repository.getSnapshot();
   const cronSchedule = request.headers.get("x-vercel-cron-schedule") ?? undefined;
 
@@ -90,8 +170,54 @@ const baseContext = async (
     trigger: detectTrigger(request),
     cronSchedule,
     companyCount: snapshot.companies.length,
+    companies: snapshot.companies,
   };
 };
+
+const publicContext = ({ companies: _companies, ...context }: RefreshState) =>
+  context;
+
+const unknownErrorMessage = (error: unknown) =>
+  error instanceof Error ? error.message : String(error);
+
+const missingSupabaseStoreResponse = (
+  context: RefreshState,
+  missingEnv: readonly string[],
+) =>
+  json(
+    {
+      status: "skipped",
+      code: "market_update_store_not_configured",
+      ...publicContext(context),
+      missingEnv,
+      acceptedEnv: [
+        "SUPABASE_URL",
+        "NEXT_PUBLIC_SUPABASE_URL",
+        "SUPABASE_SERVICE_ROLE_KEY",
+      ],
+      wouldWrite: false,
+    },
+    { status: 503 },
+  );
+
+const marketUpdateResponse = (
+  context: RefreshState,
+  result: MarketUpdateResult,
+) =>
+  json(
+    {
+      status: result.status,
+      code: result.status === "succeeded"
+        ? "market_update_succeeded"
+        : "market_update_failed",
+      ...publicContext(context),
+      provider: result.provider,
+      rowsRead: result.rowsRead,
+      rowsWritten: result.rowsWritten,
+      errorMessage: result.errorMessage,
+    },
+    { status: result.status === "succeeded" ? 200 : 502 },
+  );
 
 export const methodNotAllowedResponse = (_request: Request) =>
   json(
@@ -111,7 +237,9 @@ export const handleMarketRefresh = async ({
   request,
   repository,
   env = process.env,
+  dependencies = {},
 }: HandleMarketRefreshInput) => {
+  const deps = { ...defaultDependencies, ...dependencies };
   const refreshSecrets = configuredRefreshSecrets(env);
   if (refreshSecrets.length === 0) {
     return json(
@@ -146,7 +274,7 @@ export const handleMarketRefresh = async ({
     return json({
       status: "dry_run",
       code: "dry_run",
-      ...context,
+      ...publicContext(context),
       wouldWrite: false,
     });
   }
@@ -155,19 +283,19 @@ export const handleMarketRefresh = async ({
     return json({
       status: "skipped",
       code: "provider_disabled",
-      ...context,
+      ...publicContext(context),
       wouldWrite: false,
     });
   }
 
-  if (context.provider === "hithink-fuyao" || context.provider === "fuyao") {
-    if (!hithinkFuyaoApiKey(env)) {
+  if (context.provider === "hithink-fuyao") {
+    const apiKey = hithinkFuyaoApiKey(env);
+    if (!apiKey) {
       return json(
         {
           status: "skipped",
           code: "provider_not_configured",
-          ...context,
-          provider: "hithink-fuyao",
+          ...publicContext(context),
           missingEnv: ["HITHINK_FUYAO_API_KEY"],
           acceptedEnv: ["HITHINK_FUYAO_API_KEY", "FUYAO_TOKEN", "API_KEY"],
           wouldWrite: false,
@@ -175,13 +303,45 @@ export const handleMarketRefresh = async ({
         { status: 503 },
       );
     }
+
+    const updateConfig = supabaseUpdateConfig(env);
+    if (updateConfig.missingEnv.length > 0) {
+      return missingSupabaseStoreResponse(context, updateConfig.missingEnv);
+    }
+
+    const provider = deps.createHithinkFuyaoMarketDataProvider({ apiKey });
+    const client = deps.createSupabaseMarketUpdateClient(
+      (updateConfig as SupabaseUpdateConfig).supabaseUrl,
+      (updateConfig as SupabaseUpdateConfig).serviceRoleKey,
+    );
+    const store = deps.createMarketUpdateStore(client);
+
+    try {
+      const result = await deps.runMarketUpdate({
+        companies: context.companies,
+        provider,
+        store,
+        secretRedactions: [apiKey],
+      });
+      return marketUpdateResponse(context, result);
+    } catch (error) {
+      return marketUpdateResponse(context, {
+        status: "failed",
+        provider: "hithink-fuyao",
+        rowsRead: 0,
+        rowsWritten: 0,
+        errorMessage: sanitizeUpdateErrorMessage(unknownErrorMessage(error), [
+          apiKey,
+        ]),
+      });
+    }
   }
 
   return json(
     {
       status: "skipped",
       code: "provider_not_implemented",
-      ...context,
+      ...publicContext(context),
       wouldWrite: false,
     },
     { status: 501 },
