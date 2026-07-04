@@ -11,7 +11,8 @@
     "test:e2e": "playwright test",
     "test:e2e:server": "next build && next start",
     "typecheck": "tsc --noEmit",
-    "export:supabase-seed": "vite-node --config vitest.config.ts scripts/export-supabase-seed-cli.ts"
+    "export:supabase-seed": "vite-node --config vitest.config.ts scripts/export-supabase-seed-cli.ts",
+    "sync:supabase-seed": "vite-node --config vitest.config.ts scripts/sync-supabase-seed.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.50.0",

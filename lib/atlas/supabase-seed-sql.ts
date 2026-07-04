@@ -616,12 +616,9 @@ from ${valuesTable({
       ]),
     })}
 join public.companies company on company.slug = seed.company_slug
-on conflict (slug) do update set
-  stage_id = excluded.stage_id,
-  group_id = excluded.group_id,
-  subnode_id = excluded.subnode_id,
+on conflict (stage_id, group_id, subnode_id, rank) do update set
+  slug = excluded.slug,
   company_id = excluded.company_id,
-  rank = excluded.rank,
   priority = excluded.priority,
   relevance = excluded.relevance,
   evidence_level = excluded.evidence_level,

@@ -323,6 +323,12 @@ export const atlasStages: readonly AtlasStage[] = [
             kind: "material",
           },
           {
+            id: "glass-substrate",
+            label: "玻璃基板 / TGV",
+            description: "面向玻璃核心基板和 TGV 互联的潜在高端封装材料平台。",
+            kind: "material",
+          },
+          {
             id: "underfill",
             label: "Underfill",
             description: "提升芯片与基板连接可靠性。",
@@ -917,15 +923,26 @@ export const atlasStages: readonly AtlasStage[] = [
         ],
       },
       {
+        id: "package-manufacturing",
+        title: "封装制造 / 封测",
+        summary: "封测厂、晶圆级封装和封装测试把先进封装结构落到可量产产品。",
+        nodes: [
+          { id: "osat-advanced-packaging", label: "封测 / OSAT", description: "承接封装制造、测试和客户量产导入。", kind: "component" },
+          { id: "wafer-level-packaging", label: "晶圆级封装", description: "WLCSP、Fan-out、Bumping 等晶圆级封装能力。", kind: "component" },
+          { id: "advanced-package-testing", label: "封装测试", description: "先进封装后的电性能、可靠性和量产测试。", kind: "equipment" },
+        ],
+      },
+      {
         id: "package-structures",
         title: "封装结构",
-        summary: "中介层、CoWoS、2.5D/3D 和封装基板承担高密度互联。",
+        summary: "中介层、CoWoS、2.5D/3D、封装基板和玻璃基板路线承担高密度互联。",
         nodes: [
           { id: "silicon-interposer", label: "Silicon Interposer", description: "硅中介层。", kind: "component" },
           { id: "cowos", label: "CoWoS", description: "高端 2.5D 封装技术路线。", kind: "component" },
           { id: "two-five-d", label: "2.5D 封装", description: "用中介层或重布线层横向集成多颗芯片。", kind: "component" },
           { id: "three-d-packaging", label: "3D 封装", description: "垂直堆叠与高密度互连。", kind: "component" },
           { id: "package-substrate", label: "封装基板", description: "芯片与 PCB 之间的高密度连接层。", kind: "component" },
+          { id: "glass-core-substrate", label: "玻璃基板封装", description: "以玻璃核心基板和 TGV 提升尺寸稳定性与高密度互连。", kind: "component" },
           { id: "accelerator-module", label: "加速器模组", description: "封装完成后进入板级系统的模块。", kind: "component" },
         ],
       },
@@ -1035,6 +1052,7 @@ export const atlasStages: readonly AtlasStage[] = [
             realNodeId: "low-loss-ccl",
           },
           { id: "high-speed-connector", label: "高速连接器", description: "板间或线缆高速连接。", kind: "component" },
+          { id: "copper-cable-dac-aec", label: "DAC / AEC 铜缆", description: "短距高速互联中的无源/有源铜缆方案。", kind: "component" },
         ],
       },
       {
@@ -1043,6 +1061,7 @@ export const atlasStages: readonly AtlasStage[] = [
         summary: "高功耗 AI 板卡必须同时解决供电、散热和机械结构。",
         nodes: [
           { id: "vrm-power-module", label: "VRM / 电源模块", description: "为加速器和高速芯片稳定供电。", kind: "component" },
+          { id: "mlcc", label: "MLCC", description: "高速板卡和电源网络中的关键被动元件。", kind: "component" },
           { id: "liquid-cold-plate", label: "液冷板 / 冷却液 / TIM", description: "液冷和热界面材料形成散热路径。", kind: "component" },
           { id: "accelerator-card", label: "加速卡", description: "承载 AI 加速器模组的板卡。", kind: "component" },
           { id: "motherboard", label: "主板", description: "服务器系统的核心承载板。", kind: "component" },
@@ -1331,12 +1350,24 @@ export const atlasStages: readonly AtlasStage[] = [
           { id: "data-center-infrastructure", label: "数据中心基础设施", description: "电力、冷却、机柜和运维环境。", kind: "system" },
         ],
       },
+      {
+        id: "data-center-power",
+        title: "电力基础设施",
+        summary: "AIDC 受电、变配电、UPS、储能和备用发电决定可用功率与交付节奏。",
+        nodes: [
+          { id: "ups-power-distribution", label: "UPS / 配电", description: "数据中心不间断电源、配电柜和电能质量设备。", kind: "component" },
+          { id: "transformer-switchgear", label: "变压器 / 开关设备", description: "园区受电、变配电和中高压开关设备。", kind: "component" },
+          { id: "energy-storage-grid", label: "储能 / 电网协同", description: "削峰填谷、备用电源和源网荷储协同。", kind: "system" },
+          { id: "backup-generation", label: "备用电源 / 燃气轮机", description: "面向高可靠供电的备用发电与发电侧装备。", kind: "system" },
+        ],
+      },
     ],
     internalConnections: [
       { id: "board-to-server", label: "加速卡 / 主板 → AI 服务器", kind: "flow" },
       { id: "optical-to-switch", label: "光模块 / CPO 链路 → 交换机", kind: "flow" },
       { id: "server-switch-to-cluster", label: "AI 服务器 + 交换机 → 集群网络", kind: "flow" },
       { id: "cluster-to-infra", label: "集群网络 → 数据中心基础设施", kind: "flow" },
+      { id: "infra-to-power", label: "数据中心基础设施 → 电力基础设施", kind: "flow" },
     ],
   },
   {

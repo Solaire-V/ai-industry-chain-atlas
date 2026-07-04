@@ -6,6 +6,7 @@ test-results/
 .DS_Store
 .worktrees/
 .superpowers/
+.vercel/
 *.tsbuildinfo
 supabase/seed.sql
 docs/

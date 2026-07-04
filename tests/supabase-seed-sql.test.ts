@@ -24,10 +24,11 @@ describe("supabase seed sql", () => {
     }
   });
 
-  it("keeps seed imports idempotent by using slug conflict keys", () => {
+  it("keeps seed imports idempotent by using database conflict keys", () => {
     const sql = buildSupabaseSeedSql(verticalSlice);
 
     expect(sql).toContain("on conflict (slug) do update");
+    expect(sql).toContain("on conflict (stage_id, group_id, subnode_id, rank)");
     expect(sql).toContain("company_node_roles_slug_unique_idx");
     expect(sql).toContain("supply_relations_slug_unique_idx");
     expect(sql).toContain("market_cap");

@@ -2,7 +2,10 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { AtlasHeader } from "@/components/atlas/atlas-header";
+import {
+  AtlasHeader,
+  type AtlasGlobalSearchResult,
+} from "@/components/atlas/atlas-header";
 import { CompanyDrawer } from "@/components/atlas/company-drawer";
 import { NodeDrawer } from "@/components/atlas/node-drawer";
 import { ThreeLayerAtlasCanvas } from "@/components/atlas/three-layer-atlas-canvas";
@@ -16,6 +19,7 @@ import {
 import type { AtlasSnapshot } from "@/lib/atlas/schema";
 import {
   atlasStageById,
+  atlasStages,
   findStageBySearch,
   getStageIdForNode,
   getStageRealNodeIds,
@@ -106,6 +110,93 @@ export function AtlasApp({
     queryRef.current = next;
     setQuery(next);
   };
+
+  const globalSearchResults: readonly AtlasGlobalSearchResult[] = normalizedSearch
+    ? [
+        ...initialSnapshot.companies
+          .filter((company) =>
+            [company.name, company.ticker, company.exchange]
+              .join(" ")
+              .toLocaleLowerCase()
+              .includes(normalizedSearch),
+          )
+          .slice(0, 5)
+          .map((company) => ({
+            id: `company-${company.id}`,
+            typeLabel: "公司详情",
+            title: company.name,
+            description: `${company.ticker} · 打开公司库与详情`,
+            onSelect: () => {
+              setFocusAnchorNodeId(null);
+              updateQuery({
+                view: "companies",
+                company: company.id,
+                node: null,
+                search: searchInput,
+              });
+            },
+          })),
+        ...initialSnapshot.nodes
+          .filter((node) =>
+            [node.name, node.englishName ?? "", node.summary]
+              .join(" ")
+              .toLocaleLowerCase()
+              .includes(normalizedSearch),
+          )
+          .slice(0, 5)
+          .map((node) => ({
+            id: `node-${node.id}`,
+            typeLabel: "节点详情",
+            title: node.name,
+            description: "打开主界面节点详情",
+            onSelect: () => {
+              setFocusAnchorNodeId(null);
+              const nextStage = getStageIdForNode(node.id) ?? queryRef.current.stage;
+              updateQuery({
+                view: "canvas",
+                stage: nextStage,
+                node: node.id,
+                company: null,
+                search: searchInput,
+              });
+            },
+          })),
+        ...atlasStages
+          .filter((stage) =>
+            [
+              stage.name,
+              stage.shortName,
+              stage.role,
+              stage.input,
+              stage.output,
+              ...stage.groups.flatMap((group) => [
+                group.title,
+                ...group.nodes.map((node) => node.label),
+              ]),
+            ]
+              .join(" ")
+              .toLocaleLowerCase()
+              .includes(normalizedSearch),
+          )
+          .slice(0, 4)
+          .map((stage) => ({
+            id: `stage-${stage.id}`,
+            typeLabel: "主界面模块",
+            title: stage.name,
+            description: "定位产业链主流程",
+            onSelect: () => {
+              setFocusAnchorNodeId(null);
+              updateQuery({
+                view: "canvas",
+                stage: stage.id,
+                node: null,
+                company: null,
+                search: searchInput,
+              });
+            },
+          })),
+      ]
+    : [];
 
   const closeNodeDrawer = () => {
     if (selectedNode) setFocusAnchorNodeId(selectedNode.id);
@@ -218,6 +309,7 @@ export function AtlasApp({
     <div className="atlas-app">
       <AtlasHeader
         search={searchInput}
+        searchResults={globalSearchResults}
         onSearchChange={(nextSearch) => {
           setFocusAnchorNodeId(null);
           setSearchInput(nextSearch);

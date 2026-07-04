@@ -94,6 +94,27 @@ describe("stage-map", () => {
     );
   });
 
+  it("keeps investable AI hardware gaps as first-class subnodes", () => {
+    const labels = atlasStages.flatMap((stage) =>
+      stage.groups.flatMap((group) => group.nodes.map((node) => node.label)),
+    );
+
+    expect(labels).toEqual(
+      expect.arrayContaining([
+        "玻璃基板 / TGV",
+        "封测 / OSAT",
+        "晶圆级封装",
+        "玻璃基板封装",
+        "MLCC",
+        "UPS / 配电",
+        "变压器 / 开关设备",
+        "储能 / 电网协同",
+        "备用电源 / 燃气轮机",
+        "DAC / AEC 铜缆",
+      ]),
+    );
+  });
+
   it("keeps displayed subnode labels unique within each stage", () => {
     for (const stage of atlasStages) {
       const labels = stage.groups.flatMap((group) =>

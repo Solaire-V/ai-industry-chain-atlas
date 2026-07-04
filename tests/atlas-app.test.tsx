@@ -32,6 +32,11 @@ const renderAtlas = (
   return { push, replace };
 };
 
+const openGlobalSearch = () => {
+  fireEvent.click(screen.getByRole("button", { name: /全局搜索/ }));
+  return screen.getByRole("searchbox", { name: "全局搜索" });
+};
+
 describe("AtlasApp", () => {
   it("renders the swimlane workbench with product navigation and no legacy controls", () => {
     renderAtlas();
@@ -74,6 +79,29 @@ describe("AtlasApp", () => {
     expect(screen.getByRole("heading", { name: "AI 产业链泳道图" })).toBeInTheDocument();
     expect(screen.getByRole("complementary", { name: "光互联流程详情" })).toBeInTheDocument();
     expect(screen.queryByText("可更新数据层")).not.toBeInTheDocument();
+  });
+
+  it("uses an explicit global search launcher with destination results", () => {
+    const { push } = renderAtlas();
+
+    expect(
+      screen.queryByRole("searchbox", { name: "搜索节点、公司或代码" }),
+    ).not.toBeInTheDocument();
+
+    const globalSearch = openGlobalSearch();
+    expect(globalSearch).toHaveAttribute("placeholder", "搜公司 / 节点 / 产业环节");
+    expect(screen.getByText("选择结果后跳转到对应页面")).toBeInTheDocument();
+
+    fireEvent.change(globalSearch, { target: { value: "源杰科技" } });
+    fireEvent.click(screen.getByRole("button", { name: /公司详情.*源杰科技/ }));
+
+    expect(push).toHaveBeenLastCalledWith(
+      expect.stringContaining("view=companies"),
+    );
+    expect(push).toHaveBeenLastCalledWith(
+      expect.stringContaining("company=yuanjie-technology"),
+    );
+    expect(screen.getByRole("dialog", { name: "源杰科技" })).toBeInTheDocument();
   });
 
   it("keeps main canvas connections aligned with the inspector chain summary", () => {
@@ -211,7 +239,7 @@ describe("AtlasApp", () => {
       .map((button) => button.textContent?.replace(/\s+/g, ""));
 
     expect(highSpeedTestingCards).toEqual([
-      "设备芯片/器件高速测试3公司爱德万测试泰瑞达是德科技",
+      "设备芯片/器件高速测试6公司爱德万测试泰瑞达是德科技长川科技+2",
       "设备光模块/CPO高速测试4公司是德科技致茂电子泰瑞达博杰股份",
     ]);
   });
@@ -230,13 +258,39 @@ describe("AtlasApp", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /板级系统/ }));
     const pcbCard = screen.getByTestId("library-node-high-layer-pcb-node");
-    expect(within(pcbCard).getByText("7 公司")).toBeInTheDocument();
+    expect(within(pcbCard).getByText("9 公司")).toBeInTheDocument();
     expect(within(pcbCard).getByText("胜宏科技")).toBeInTheDocument();
     expect(within(pcbCard).getByText("沪电股份")).toBeInTheDocument();
     expect(within(pcbCard).getByText("深南电路")).toBeInTheDocument();
     expect(within(pcbCard).getByText("东山精密")).toBeInTheDocument();
-    expect(within(pcbCard).getByText("+3")).toBeInTheDocument();
-    expect(within(pcbCard).queryByText("7 家覆盖")).not.toBeInTheDocument();
+    expect(within(pcbCard).getByText("+5")).toBeInTheDocument();
+    expect(within(pcbCard).queryByText("9 家覆盖")).not.toBeInTheDocument();
+  });
+
+  it("shows expanded AIDC power, copper interconnect, and cooling nodes in the node library", () => {
+    renderAtlas(
+      new URLSearchParams("view=nodes&layer=interconnect&mode=supply&stage=board-system"),
+    );
+
+    const copperCard = screen.getByTestId("library-node-copper-cable-dac-aec");
+    expect(within(copperCard).getByText("6 公司")).toBeInTheDocument();
+    expect(within(copperCard).getByText("立讯精密")).toBeInTheDocument();
+    expect(within(copperCard).getByText("兆龙互连")).toBeInTheDocument();
+    expect(within(copperCard).getByText("沃尔核材")).toBeInTheDocument();
+    expect(within(copperCard).getByText("神宇股份")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /服务器网络/ }));
+
+    expect(screen.getByTestId("library-node-ups-power-distribution")).toBeInTheDocument();
+    expect(screen.getByTestId("library-node-transformer-switchgear")).toBeInTheDocument();
+    expect(screen.getByTestId("library-node-energy-storage-grid")).toBeInTheDocument();
+    const coolingCard = screen.getByTestId("library-node-liquid-cooling-system");
+    expect(within(coolingCard).getByText("10 公司")).toBeInTheDocument();
+    expect(within(coolingCard).getByText("英维克")).toBeInTheDocument();
+    expect(within(coolingCard).getByText("高澜股份")).toBeInTheDocument();
+    expect(within(coolingCard).getByText("申菱环境")).toBeInTheDocument();
+    expect(within(coolingCard).getByText("科创新源")).toBeInTheDocument();
+    expect(within(coolingCard).getByText("+6")).toBeInTheDocument();
   });
 
   it("marks reused real nodes with their cross-stage positions", () => {
@@ -372,14 +426,40 @@ describe("AtlasApp", () => {
     fireEvent.click(screen.getByRole("button", { name: /供需关系/ }));
 
     expect(screen.getByRole("heading", { name: "供需关系" })).toBeInTheDocument();
-    expect(screen.getByText("21 条产业链边")).toBeInTheDocument();
-    expect(screen.getByText("1 条公司级供需关系")).toBeInTheDocument();
+    const supplyStatus = screen.getByLabelText("供需数据状态");
+    expect(within(supplyStatus).getByText("链路")).toBeInTheDocument();
+    expect(within(supplyStatus).getByText("21 条")).toBeInTheDocument();
+    expect(within(supplyStatus).getByText("公司关系")).toBeInTheDocument();
+    expect(within(supplyStatus).getByText("8 条")).toBeInTheDocument();
     const supplyTable = screen.getByRole("table", { name: "公司供需表" });
     expect(within(supplyTable).getByText("SK 海力士")).toBeInTheDocument();
-    expect(within(supplyTable).getByText("英伟达")).toBeInTheDocument();
+    expect(within(supplyTable).getAllByText("英伟达").length).toBeGreaterThanOrEqual(2);
     expect(within(supplyTable).getByText(/HBM3E/)).toBeInTheDocument();
+    expect(within(supplyTable).getByText(/Micron HBM4/)).toBeInTheDocument();
+    expect(within(supplyTable).getByText(/COUPE 光子引擎/)).toBeInTheDocument();
     expect(screen.getByRole("table", { name: "产业链边表" })).toBeInTheDocument();
     expect(screen.queryByText("供应关系数据待补全")).not.toBeInTheDocument();
+  });
+
+  it("renders supply relations as a data-first investor workbench", () => {
+    renderAtlas(new URLSearchParams("view=supply&layer=interconnect&mode=supply"));
+
+    const workbench = screen.getByLabelText("供需投研区");
+    const supplyTable = within(workbench).getByRole("table", { name: "公司供需表" });
+    expect(within(supplyTable).getByText("SK 海力士")).toBeInTheDocument();
+    expect(within(supplyTable).getAllByText("英伟达").length).toBeGreaterThanOrEqual(2);
+    expect(within(supplyTable).getByText("美光科技")).toBeInTheDocument();
+    expect(within(supplyTable).getAllByText("台积电").length).toBeGreaterThanOrEqual(2);
+    expect(within(supplyTable).getAllByText("博通").length).toBeGreaterThanOrEqual(2);
+
+    expect(screen.getByRole("heading", { name: "节点链路" })).toBeInTheDocument();
+    const chainGroups = within(workbench).getByLabelText("节点链路分组");
+    expect(within(chainGroups).getByText("供应链路")).toBeInTheDocument();
+    expect(within(chainGroups).getByText("集成链路")).toBeInTheDocument();
+    expect(within(chainGroups).getByText("落地链路")).toBeInTheDocument();
+    expect(within(chainGroups).getByText("InP 衬底 → 光芯片")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "关系覆盖" })).not.toBeInTheDocument();
+    expect(screen.queryByText("先看哪些节点已经有公司级证据，哪些节点目前只有产业链逻辑连接。")).not.toBeInTheDocument();
   });
 
   it("displays local valuation metrics on the market page when snapshots include them", () => {
@@ -415,6 +495,85 @@ describe("AtlasApp", () => {
     expect(within(marketTable).getByText("30")).toBeInTheDocument();
     expect(within(marketTable).getByText("40 / 25")).toBeInTheDocument();
     expect(within(marketTable).getAllByText(/USD/).length).toBeGreaterThan(1);
+  });
+
+  it("renders market data as an investor dashboard grouped by industry stage", () => {
+    const snapshotWithMarket = atlasSnapshotSchema.parse({
+      ...verticalSlice,
+      marketSnapshots: [
+        {
+          companyId: "zhongji-innolight",
+          price: 188,
+          changePct: 10,
+          currency: "CNY",
+          tradedAt: "2026-07-03T07:00:00.000Z",
+          fetchedAt: "2026-07-03T07:15:00.000Z",
+          delayMinutes: 15,
+          ttmEps: 3,
+          ttmPe: 62,
+          freshnessSource: "delayed",
+          marketCap: 210_000_000_000,
+          pb: 9,
+          ps: 18,
+          turnover: 12_000_000_000,
+        },
+        {
+          companyId: "eoptolink",
+          price: 155,
+          changePct: 2,
+          currency: "CNY",
+          tradedAt: "2026-07-03T07:00:00.000Z",
+          fetchedAt: "2026-07-03T07:15:00.000Z",
+          delayMinutes: 15,
+          ttmEps: 2,
+          ttmPe: 50,
+          freshnessSource: "delayed",
+          marketCap: 120_000_000_000,
+          pb: 8,
+          ps: 15,
+          turnover: 7_000_000_000,
+        },
+        {
+          companyId: "nvidia",
+          price: 120,
+          changePct: -1,
+          currency: "USD",
+          tradedAt: "2026-07-03T20:00:00.000Z",
+          fetchedAt: "2026-07-03T20:15:00.000Z",
+          delayMinutes: 15,
+          ttmEps: 4,
+          ttmPe: 30,
+          freshnessSource: "delayed",
+          marketCap: 3_000_000_000_000,
+          pb: 40,
+          ps: 25,
+          turnover: 10_000_000_000,
+        },
+      ],
+    });
+
+    renderAtlas(
+      new URLSearchParams("view=markets&layer=interconnect&mode=supply"),
+      snapshotWithMarket,
+    );
+
+    const workbench = screen.getByLabelText("行情投研区");
+    expect(screen.getByRole("heading", { name: "板块趋势" })).toBeInTheDocument();
+    const sectorTable = within(workbench).getByRole("table", { name: "板块趋势表" });
+    const opticalRow = within(sectorTable).getByText("光互联").closest("tr");
+    expect(opticalRow).not.toBeNull();
+    expect(within(opticalRow!).getByText(/^3 \/ \d+$/)).toBeInTheDocument();
+    expect(within(opticalRow!).getByText("+3.67%")).toBeInTheDocument();
+    expect(within(opticalRow!).getByText("中际旭创")).toBeInTheDocument();
+    expect(within(opticalRow!).getByText("英伟达")).toBeInTheDocument();
+
+    expect(screen.getByRole("heading", { name: "个股异动" })).toBeInTheDocument();
+    const moversTable = within(workbench).getByRole("table", { name: "个股行情榜" });
+    const moverRows = within(moversTable).getAllByRole("row");
+    expect(moverRows[1]).toHaveTextContent("中际旭创");
+    expect(moverRows[1]).toHaveTextContent("+10%");
+    expect(screen.queryByText("按节点库公司覆盖聚合，同一公司在同一环节只计一次。")).not.toBeInTheDocument();
+    expect(screen.queryByText("按最新涨跌幅排序，后续接入历史快照后扩展为多日趋势。")).not.toBeInTheDocument();
   });
 
   it("renders data settings with a protected market refresh console", () => {
@@ -563,6 +722,19 @@ describe("AtlasApp", () => {
     expect(within(detail).getByText("供应商 0")).toBeInTheDocument();
   });
 
+  it("selects a company when clicking anywhere on the company library row", () => {
+    renderAtlas(new URLSearchParams("view=companies&layer=interconnect&mode=supply"));
+
+    const table = screen.getByRole("table", { name: "公司研究表" });
+    const coherentRow = within(table).getByText("Coherent").closest("tr");
+    expect(coherentRow).not.toBeNull();
+
+    fireEvent.click(coherentRow!);
+
+    const detail = screen.getByRole("complementary", { name: "公司详情" });
+    expect(within(detail).getByRole("heading", { name: "Coherent" })).toBeInTheDocument();
+  });
+
   it("keeps investable node library details local without a duplicate detail action", () => {
     renderAtlas(new URLSearchParams("layer=interconnect&mode=supply&stage=optical-interconnect"));
 
@@ -666,9 +838,7 @@ describe("AtlasApp", () => {
   it("preserves spaces while typing and replaces the canonical search URL after debounce", () => {
     vi.useFakeTimers();
     const { replace } = renderAtlas();
-    const search = screen.getByRole("searchbox", {
-      name: "搜索节点、公司或代码",
-    });
+    const search = openGlobalSearch();
 
     for (const value of ["silicon", "silicon ", "silicon photonics"]) {
       fireEvent.change(search, { target: { value } });
@@ -684,9 +854,7 @@ describe("AtlasApp", () => {
   it("searches virtual subnodes and opens their owning stage", () => {
     vi.useFakeTimers();
     const { replace } = renderAtlas();
-    const search = screen.getByRole("searchbox", {
-      name: "搜索节点、公司或代码",
-    });
+    const search = openGlobalSearch();
 
     fireEvent.change(search, { target: { value: "光刻胶" } });
 
@@ -707,9 +875,7 @@ describe("AtlasApp", () => {
   it("applies stage-aware search when the search box blurs before debounce", () => {
     vi.useFakeTimers();
     const { replace } = renderAtlas();
-    const search = screen.getByRole("searchbox", {
-      name: "搜索节点、公司或代码",
-    });
+    const search = openGlobalSearch();
 
     fireEvent.change(search, { target: { value: "光刻胶" } });
     fireEvent.blur(search);
@@ -727,9 +893,7 @@ describe("AtlasApp", () => {
     vi.useFakeTimers();
     const { replace } = renderAtlas();
     const canvas = screen.getByRole("region", { name: "产业链泳道画布" });
-    const search = screen.getByRole("searchbox", {
-      name: "搜索节点、公司或代码",
-    });
+    const search = openGlobalSearch();
 
     fireEvent.click(within(canvas).getByRole("button", { name: /服务器网络/ }));
     fireEvent.change(search, { target: { value: "silicon photonics" } });
@@ -743,9 +907,7 @@ describe("AtlasApp", () => {
   it("uses real-node search to open the HBM stage in the URL", () => {
     vi.useFakeTimers();
     const { replace } = renderAtlas();
-    const search = screen.getByRole("searchbox", {
-      name: "搜索节点、公司或代码",
-    });
+    const search = openGlobalSearch();
 
     fireEvent.change(search, { target: { value: "HBM" } });
 
@@ -783,7 +945,7 @@ describe("AtlasApp", () => {
   it("searches within the canvas, reports no results, and resets cleanly", () => {
     vi.useFakeTimers();
     const { replace } = renderAtlas();
-    const search = screen.getByRole("searchbox", { name: "搜索节点、公司或代码" });
+    const search = openGlobalSearch();
 
     fireEvent.change(search, { target: { value: "AVGO" } });
     expect(screen.getByTestId("node-cpo")).toBeInTheDocument();
@@ -838,7 +1000,8 @@ describe("AtlasApp", () => {
     renderAtlas(
       new URLSearchParams("layer=interconnect&mode=supply&stage=optical-interconnect&node=cpo&company=broadcom"),
     );
-    expect(screen.getByText("暂无公开确认的供需关系")).toBeInTheDocument();
+    expect(screen.getByText("采购自 台积电")).toBeInTheDocument();
+    expect(screen.getByText(/COUPE 光子引擎/)).toBeInTheDocument();
     expect(screen.queryByText("供应给 英伟达")).not.toBeInTheDocument();
   });
 

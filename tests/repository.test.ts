@@ -139,6 +139,7 @@ describe("fixtureAtlasRepository", () => {
         }),
       ]),
     );
+    expect(snapshot.supplyRelations.length).toBeGreaterThanOrEqual(3);
 
     expect(snapshot.sources).toEqual(
       expect.arrayContaining([
@@ -205,6 +206,168 @@ describe("fixtureAtlasRepository", () => {
       expect(company?.market).toBe("CN");
       expect(coverageKeys.has(`${subnodeId}\u0000${company?.id}`)).toBe(true);
     }
+  });
+
+  it("covers expanded A-share investable gaps across packaging, glass substrate, and MLCC", async () => {
+    const snapshot = await fixtureAtlasRepository.getSnapshot();
+    const companiesByTicker = new Map(
+      snapshot.companies.map((company) => [company.ticker, company]),
+    );
+    const coverageKeys = new Set(
+      snapshot.subnodeCompanyCoverages.map(
+        (coverage) => `${coverage.subnodeId}\u0000${coverage.companyId}`,
+      ),
+    );
+    const requiredAshareCoverages = [
+      ["600584.SH", "osat-advanced-packaging"],
+      ["002156.SZ", "osat-advanced-packaging"],
+      ["002185.SZ", "osat-advanced-packaging"],
+      ["000021.SZ", "osat-advanced-packaging"],
+      ["688362.SH", "wafer-level-packaging"],
+      ["603005.SH", "wafer-level-packaging"],
+      ["603773.SH", "glass-core-substrate"],
+      ["000725.SZ", "glass-core-substrate"],
+      ["300408.SZ", "mlcc"],
+      ["000636.SZ", "mlcc"],
+      ["300285.SZ", "mlcc"],
+      ["002859.SZ", "mlcc"],
+    ] as const;
+
+    for (const [ticker, subnodeId] of requiredAshareCoverages) {
+      const company = companiesByTicker.get(ticker);
+      expect(company, `${ticker} should be in company master data`).toBeTruthy();
+      expect(company?.market).toBe("CN");
+      expect(coverageKeys.has(`${subnodeId}\u0000${company?.id}`)).toBe(true);
+    }
+  });
+
+  it("covers AIDC power infrastructure with A-share investable leaders", async () => {
+    const snapshot = await fixtureAtlasRepository.getSnapshot();
+    const companiesByTicker = new Map(
+      snapshot.companies.map((company) => [company.ticker, company]),
+    );
+    const coverageKeys = new Set(
+      snapshot.subnodeCompanyCoverages.map(
+        (coverage) => `${coverage.subnodeId}\u0000${coverage.companyId}`,
+      ),
+    );
+    const requiredAshareCoverages = [
+      ["002335.SZ", "ups-power-distribution"],
+      ["002518.SZ", "ups-power-distribution"],
+      ["300693.SZ", "ups-power-distribution"],
+      ["600089.SH", "transformer-switchgear"],
+      ["601179.SH", "transformer-switchgear"],
+      ["688676.SH", "transformer-switchgear"],
+      ["300274.SZ", "energy-storage-grid"],
+      ["600406.SH", "energy-storage-grid"],
+      ["600875.SH", "backup-generation"],
+      ["601727.SH", "backup-generation"],
+    ] as const;
+
+    for (const [ticker, subnodeId] of requiredAshareCoverages) {
+      const company = companiesByTicker.get(ticker);
+      expect(company, `${ticker} should be in company master data`).toBeTruthy();
+      expect(company?.market).toBe("CN");
+      expect(coverageKeys.has(`${subnodeId}\u0000${company?.id}`)).toBe(true);
+    }
+  });
+
+  it("covers high-speed copper interconnect and liquid cooling A-share watchlists", async () => {
+    const snapshot = await fixtureAtlasRepository.getSnapshot();
+    const companiesByTicker = new Map(
+      snapshot.companies.map((company) => [company.ticker, company]),
+    );
+    const coverageKeys = new Set(
+      snapshot.subnodeCompanyCoverages.map(
+        (coverage) => `${coverage.subnodeId}\u0000${coverage.companyId}`,
+      ),
+    );
+    const requiredAshareCoverages = [
+      ["002475.SZ", "copper-cable-dac-aec"],
+      ["300913.SZ", "copper-cable-dac-aec"],
+      ["002130.SZ", "copper-cable-dac-aec"],
+      ["300563.SZ", "copper-cable-dac-aec"],
+      ["002837.SZ", "liquid-cooling-system"],
+      ["300990.SZ", "liquid-cooling-system"],
+      ["603912.SH", "liquid-cooling-system"],
+      ["600481.SH", "liquid-cooling-system"],
+      ["002050.SZ", "liquid-cooling-system"],
+    ] as const;
+
+    for (const [ticker, subnodeId] of requiredAshareCoverages) {
+      const company = companiesByTicker.get(ticker);
+      expect(company, `${ticker} should be in company master data`).toBeTruthy();
+      expect(company?.market).toBe("CN");
+      expect(coverageKeys.has(`${subnodeId}\u0000${company?.id}`)).toBe(true);
+    }
+  });
+
+  it("expands investable A-share coverage across materials, PCB, and equipment gaps", async () => {
+    const snapshot = await fixtureAtlasRepository.getSnapshot();
+    const companiesByTicker = new Map(
+      snapshot.companies.map((company) => [company.ticker, company]),
+    );
+    const coverageKeys = new Set(
+      snapshot.subnodeCompanyCoverages.map(
+        (coverage) => `${coverage.subnodeId}\u0000${coverage.companyId}`,
+      ),
+    );
+    const requiredAshareCoverages = [
+      ["300236.SZ", "photoresist"],
+      ["300236.SZ", "wet-electronic-chemicals"],
+      ["300398.SZ", "photoresist"],
+      ["002436.SZ", "abf"],
+      ["002436.SZ", "package-substrate"],
+      ["002815.SZ", "high-layer-pcb-node"],
+      ["002938.SZ", "high-layer-pcb-node"],
+      ["603283.SH", "package-inspection"],
+      ["603283.SH", "hbm-test"],
+      ["603203.SH", "underfill-equipment"],
+      ["688025.SH", "optical-coupling"],
+      ["301369.SZ", "tester"],
+    ] as const;
+
+    for (const [ticker, subnodeId] of requiredAshareCoverages) {
+      const company = companiesByTicker.get(ticker);
+      expect(company, `${ticker} should be in company master data`).toBeTruthy();
+      expect(company?.market).toBe("CN");
+      expect(coverageKeys.has(`${subnodeId}\u0000${company?.id}`)).toBe(true);
+    }
+  });
+
+  it("tracks company-level supply relationships beyond HBM and CPO", async () => {
+    const snapshot = await fixtureAtlasRepository.getSnapshot();
+
+    expect(snapshot.supplyRelations.length).toBeGreaterThanOrEqual(8);
+    expect(snapshot.supplyRelations).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          supplierId: "tsmc",
+          customerId: "nvidia",
+          nodeId: "hbm",
+        }),
+        expect.objectContaining({
+          supplierId: "nvidia",
+          customerId: "dell",
+          nodeId: "ai-server",
+        }),
+        expect.objectContaining({
+          supplierId: "nvidia",
+          customerId: "supermicro",
+          nodeId: "ai-server",
+        }),
+        expect.objectContaining({
+          supplierId: "vertiv",
+          customerId: "nvidia",
+          nodeId: "ai-cluster",
+        }),
+        expect.objectContaining({
+          supplierId: "broadcom",
+          customerId: "arista",
+          nodeId: "ethernet-switch",
+        }),
+      ]),
+    );
   });
 
   it("rejects duplicate IDs at the repository runtime boundary", async () => {

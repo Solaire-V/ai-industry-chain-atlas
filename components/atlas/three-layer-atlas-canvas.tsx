@@ -1258,6 +1258,7 @@ function WorkspaceDataPanel({
       <MarketDataPanel
         companies={companies}
         marketSnapshots={marketSnapshots}
+        subnodeCompanyCoverages={subnodeCompanyCoverages}
       />
     );
   }

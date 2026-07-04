@@ -311,6 +311,14 @@ export function CompanyLibraryPanel({
                   <tr
                     key={row.company.id}
                     data-selected={selectedRow?.company.id === row.company.id}
+                    tabIndex={0}
+                    onClick={() => setSelectedCompanyId(row.company.id)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        setSelectedCompanyId(row.company.id);
+                      }
+                    }}
                   >
                     <td>
                       <button
