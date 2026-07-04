@@ -93,21 +93,27 @@ const filterSnapshotByLayer = (
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
-  const rawLayer = url.searchParams.get("layer") ?? "interconnect";
-  const layer = layerSchema.safeParse(rawLayer);
+  const rawLayer = url.searchParams.get("layer");
 
-  if (!layer.success) {
-    return json(
-      {
-        error: {
-          code: "invalid_layer",
-          message: `Unknown atlas layer: ${rawLayer}`,
+  if (rawLayer) {
+    const layer = layerSchema.safeParse(rawLayer);
+
+    if (!layer.success) {
+      return json(
+        {
+          error: {
+            code: "invalid_layer",
+            message: `Unknown atlas layer: ${rawLayer}`,
+          },
         },
-      },
-      400,
-    );
+        400,
+      );
+    }
+
+    const snapshot = await atlasRepository.getSnapshot();
+    return json(filterSnapshotByLayer(snapshot, layer.data));
   }
 
   const snapshot = await atlasRepository.getSnapshot();
-  return json(filterSnapshotByLayer(snapshot, layer.data));
+  return json(atlasSnapshotSchema.parse(snapshot));
 }

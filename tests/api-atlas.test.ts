@@ -15,6 +15,26 @@ describe("GET /api/atlas", () => {
     getSnapshot.mockReset();
   });
 
+  it("returns the full atlas snapshot when no layer filter is requested", async () => {
+    getSnapshot.mockResolvedValueOnce(verticalSlice);
+    const { GET } = await import("@/app/api/atlas/route");
+
+    const response = await GET(new Request("https://example.test/api/atlas"));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(atlasSnapshotSchema.parse(body)).toEqual(body);
+    expect(getSnapshot).toHaveBeenCalledTimes(1);
+    expect(body.nodes).toHaveLength(verticalSlice.nodes.length);
+    expect(body.companies).toHaveLength(verticalSlice.companies.length);
+    expect(body.subnodeCompanyCoverages).toHaveLength(
+      verticalSlice.subnodeCompanyCoverages.length,
+    );
+    expect(body.supplyRelations).toHaveLength(
+      verticalSlice.supplyRelations.length,
+    );
+  });
+
   it("returns a parsed layer snapshot with public cache headers and no secrets", async () => {
     process.env.SUPABASE_SERVICE_ROLE_KEY = "service-role-secret";
     getSnapshot.mockResolvedValueOnce({
