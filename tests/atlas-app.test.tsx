@@ -430,7 +430,9 @@ describe("AtlasApp", () => {
     expect(within(supplyStatus).getByText("链路")).toBeInTheDocument();
     expect(within(supplyStatus).getByText("21 条")).toBeInTheDocument();
     expect(within(supplyStatus).getByText("公司关系")).toBeInTheDocument();
-    expect(within(supplyStatus).getByText("8 条")).toBeInTheDocument();
+    expect(
+      within(supplyStatus).getByText(`${verticalSlice.supplyRelations.length} 条`),
+    ).toBeInTheDocument();
     const supplyTable = screen.getByRole("table", { name: "公司供需表" });
     expect(within(supplyTable).getByText("SK 海力士")).toBeInTheDocument();
     expect(within(supplyTable).getAllByText("英伟达").length).toBeGreaterThanOrEqual(2);

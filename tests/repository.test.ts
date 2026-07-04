@@ -338,7 +338,7 @@ describe("fixtureAtlasRepository", () => {
   it("tracks company-level supply relationships beyond HBM and CPO", async () => {
     const snapshot = await fixtureAtlasRepository.getSnapshot();
 
-    expect(snapshot.supplyRelations.length).toBeGreaterThanOrEqual(8);
+    expect(snapshot.supplyRelations.length).toBeGreaterThanOrEqual(17);
     expect(snapshot.supplyRelations).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -365,6 +365,51 @@ describe("fixtureAtlasRepository", () => {
           supplierId: "broadcom",
           customerId: "arista",
           nodeId: "ethernet-switch",
+        }),
+        expect.objectContaining({
+          supplierId: "nvidia",
+          customerId: "amazon",
+          nodeId: "ai-cluster",
+        }),
+        expect.objectContaining({
+          supplierId: "nvidia",
+          customerId: "microsoft",
+          nodeId: "ai-cluster",
+        }),
+        expect.objectContaining({
+          supplierId: "nvidia",
+          customerId: "alphabet",
+          nodeId: "ai-cluster",
+        }),
+        expect.objectContaining({
+          supplierId: "nvidia",
+          customerId: "meta",
+          nodeId: "ai-cluster",
+        }),
+        expect.objectContaining({
+          supplierId: "nvidia",
+          customerId: "openai",
+          nodeId: "ai-cluster",
+        }),
+        expect.objectContaining({
+          supplierId: "nvidia",
+          customerId: "lenovo",
+          nodeId: "ai-server",
+        }),
+        expect.objectContaining({
+          supplierId: "nvidia",
+          customerId: "fii",
+          nodeId: "ai-server",
+        }),
+        expect.objectContaining({
+          supplierId: "nvidia",
+          customerId: "quanta",
+          nodeId: "ai-server",
+        }),
+        expect.objectContaining({
+          supplierId: "nvidia",
+          customerId: "cisco",
+          nodeId: "ai-server",
         }),
       ]),
     );
