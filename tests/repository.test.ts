@@ -338,7 +338,7 @@ describe("fixtureAtlasRepository", () => {
   it("tracks company-level supply relationships beyond HBM and CPO", async () => {
     const snapshot = await fixtureAtlasRepository.getSnapshot();
 
-    expect(snapshot.supplyRelations.length).toBeGreaterThanOrEqual(17);
+    expect(snapshot.supplyRelations.length).toBeGreaterThanOrEqual(22);
     expect(snapshot.supplyRelations).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -410,6 +410,31 @@ describe("fixtureAtlasRepository", () => {
           supplierId: "nvidia",
           customerId: "cisco",
           nodeId: "ai-server",
+        }),
+        expect.objectContaining({
+          supplierId: "nvidia",
+          customerId: "oracle",
+          nodeId: "ai-cluster",
+        }),
+        expect.objectContaining({
+          supplierId: "nvidia",
+          customerId: "wistron",
+          nodeId: "ai-server",
+        }),
+        expect.objectContaining({
+          supplierId: "nvidia",
+          customerId: "cadence",
+          nodeId: "ai-cluster",
+        }),
+        expect.objectContaining({
+          supplierId: "nvidia",
+          customerId: "synopsys",
+          nodeId: "ai-cluster",
+        }),
+        expect.objectContaining({
+          supplierId: "schneider-electric",
+          customerId: "nvidia",
+          nodeId: "ai-cluster",
         }),
       ]),
     );
